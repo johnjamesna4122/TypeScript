@@ -4973,6 +4973,9 @@ namespace ts {
 
     export function setObjectAllocator(alloc: ObjectAllocator) {
         objectAllocator = alloc;
+        if (ts.Debug.isDebugging) {
+            ts.Debug.enableDebugInfo();
+        }
     }
 
     export function formatStringFromArgs(text: string, args: ArrayLike<string | number>, baseIndex = 0): string {

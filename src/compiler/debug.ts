@@ -261,7 +261,31 @@ namespace ts {
          * Injects debug information into frequently used types.
          */
         export function enableDebugInfo() {
+            enableDebugInfoForObjectAllocator();
             if (isDebugInfoEnabled) return;
+            // attempt to load extended debugging information
+            try {
+                if (sys && sys.require) {
+                    const basePath = getDirectoryPath(resolvePath(sys.getExecutingFilePath()));
+                    const result = sys.require(basePath, "./compiler-debug") as RequireResult<ExtendedDebugModule>;
+                    if (!result.error) {
+                        result.module.init(ts);
+                        extendedDebugModule = result.module;
+                    }
+                }
+            }
+            catch {
+                // do nothing
+            }
+
+            isDebugInfoEnabled = true;
+        }
+
+        function enableDebugInfoForObjectAllocator() {
+            const nodeConstructor = objectAllocator.getNodeConstructor();
+            if (nodeConstructor.prototype.hasOwnProperty("__debugKind")) {
+                return;
+            }
 
             // Add additional properties in debug mode to assist with debugging.
             Object.defineProperties(objectAllocator.getSymbolConstructor().prototype, {
@@ -301,24 +325,6 @@ namespace ts {
                     });
                 }
             }
-
-            // attempt to load extended debugging information
-            try {
-                if (sys && sys.require) {
-                    const basePath = getDirectoryPath(resolvePath(sys.getExecutingFilePath()));
-                    const result = sys.require(basePath, "./compiler-debug") as RequireResult<ExtendedDebugModule>;
-                    if (!result.error) {
-                        result.module.init(ts);
-                        extendedDebugModule = result.module;
-                    }
-                }
-            }
-            catch {
-                // do nothing
-            }
-
-            isDebugInfoEnabled = true;
         }
-
     }
 }
