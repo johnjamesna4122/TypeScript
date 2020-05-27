@@ -19497,9 +19497,10 @@ namespace ts {
             }
             switch (source.kind) {
                 case SyntaxKind.Identifier:
-                    return target.kind === SyntaxKind.Identifier && getResolvedSymbol(<Identifier>source) === getResolvedSymbol(<Identifier>target) ||
-                        (target.kind === SyntaxKind.VariableDeclaration || target.kind === SyntaxKind.BindingElement) &&
+                    const isSameSymbolWhenTargetIsIdentifier = target.kind === SyntaxKind.Identifier && getResolvedSymbol(<Identifier>source) === getResolvedSymbol(<Identifier>target);
+                    const isSameSymbolWhenTargetIsNotIdentifier = (target.kind === SyntaxKind.VariableDeclaration || target.kind === SyntaxKind.BindingElement) &&
                         getExportSymbolOfValueSymbolIfExported(getResolvedSymbol(<Identifier>source)) === getSymbolOfNode(target);
+                    return isSameSymbolWhenTargetIsIdentifier || isSameSymbolWhenTargetIsNotIdentifier;
                 case SyntaxKind.ThisKeyword:
                     return target.kind === SyntaxKind.ThisKeyword;
                 case SyntaxKind.SuperKeyword:
@@ -19921,7 +19922,7 @@ namespace ts {
         function isTypeSubsetOf(source: Type, target: Type) {
             return source === target || target.flags & TypeFlags.Union && isTypeSubsetOfUnion(source, <UnionType>target);
         }
-
+// How to define type A is subset of untion type B: when type A is also a union type, if type t appears in A, it appears in B. if type A is not a untion type,
         function isTypeSubsetOfUnion(source: Type, target: UnionType) {
             if (source.flags & TypeFlags.Union) {
                 for (const t of (<UnionType>source).types) {
@@ -20784,7 +20785,7 @@ namespace ts {
                 return isMatchingReference(reference, expr.expression) && isDiscriminantProperty(type, name);
             }
 
-            function narrowTypeByDiscriminant(type: Type, access: AccessExpression, narrowType: (t: Type) => Type): Type {
+            function narrowTypeByDiscriminant(type: Type, access: AccessExpression, narrowTypeCb: (t: Type) => Type): Type {
                 const propName = getAccessedPropertyName(access);
                 if (propName === undefined) {
                     return type;
@@ -20793,7 +20794,7 @@ namespace ts {
                 if (!propType) {
                     return type;
                 }
-                const narrowedPropType = narrowType(propType);
+                const narrowedPropType = narrowTypeCb(propType);
                 return filterType(type, t => {
                     const discriminantType = getTypeOfPropertyOrIndexSignature(t, propName);
                     return !(discriminantType.flags & TypeFlags.Never) && isTypeComparableTo(discriminantType, narrowedPropType);
@@ -20960,11 +20961,202 @@ namespace ts {
                 if (operator === SyntaxKind.ExclamationEqualsToken || operator === SyntaxKind.ExclamationEqualsEqualsToken) {
                     assumeTrue = !assumeTrue;
                 }
+
+
+                // return one non-negative number if match
+                function getTypeDepthIfMatch(expression: Expression, type: Type): number {
+                    let result = 0;
+                    let exprTmp = expression;
+
+                    let curType: Type = getTypeOfExpression(expression);
+
+                    if (curType === type) {
+                        return result;
+
+                    }
+                    while (exprTmp.kind === SyntaxKind.PropertyAccessExpression) {
+                        result = result + 1;
+                        exprTmp = (<PropertyAccessExpression>exprTmp).expression;
+                        curType = getTypeOfExpression(exprTmp);
+
+                        if (curType === type){
+                            return result;
+                        }
+                    }
+                    return -1;
+                }
+
+                // If expression is a.b.c.d, the result would be ["b","c","d"]
+                // if given depth, the array.length would be the length. --- this property need have pre-knowledge of expression.
+                function getPropertiesOfPropertyAccessExpression(expr: PropertyAccessExpression, depth?: number) {
+                    const properties = [];
+                    let exprTmp: LeftHandSideExpression = expr;
+                    while (exprTmp.kind === SyntaxKind.PropertyAccessExpression && properties.length !== depth) {
+                        properties.unshift((<PropertyAccessExpression>exprTmp).name.escapedText);
+                        exprTmp = (<PropertyAccessExpression>exprTmp).expression;
+                    }
+                    return properties;
+                }
+
+                type TypeOfString = "string" | "boolean" | "bigint" | "number" | "symbol" | "function" | "undefined" | "object";
+                function getTypeOfStringAccordingToType(type: Type): Set<TypeOfString> {
+                    const resultSet = new Set<TypeOfString>();
+                    getTypeOfStringAccordingToTypeWorker(type);
+                    function getTypeOfStringAccordingToTypeWorker(type: Type): void {
+                        const flags = type.flags;
+                        // special type, defined by ts
+                        if ((flags & TypeFlags.Union) && !(flags & TypeFlags.Primitive)) {
+                            (<UnionType>type).types.forEach(type => getTypeOfStringAccordingToTypeWorker(type));
+                        }
+
+                        // base type defiend by w3c
+                        if (flags & TypeFlags.StringLike) {
+                            resultSet.add("string");
+                        }
+                        if (flags & TypeFlags.NumberLike) {
+                            resultSet.add("number");
+                        }
+                        if (flags & TypeFlags.BigIntLike) {
+                            resultSet.add("bigint");
+                        }
+                        if (flags & TypeFlags.BooleanLike) {
+                            resultSet.add("boolean");
+                        }
+                        if (flags & TypeFlags.ESSymbolLike) {
+                            resultSet.add("symbol");
+                        }
+                        // Note: boolean is union, wwhich contains two booleanLibertial
+                        if (flags & TypeFlags.ObjectFlagsType && !(flags & TypeFlags.Primitive)) {
+                            resultSet.add("object");
+                        }
+                        if (flags & TypeFlags.Undefined) {
+                            resultSet.add("undefined");
+                        }
+                        // where is function?
+                    }
+                    return resultSet;
+                }
+
+                // path is whether last might be considered, such as:
+                // someKey: boolean|{a:number}, path is root.someKey or root.someKey.a is different.
+                // For now if Union type and Intersction type are in path and not the last one, an error would be thrown.
+                // get one property type from one type. Return meaningful type only when the type could be accessed no ambiguously(no union on path, explicitly string and something else.)
+                function getPropertyTypeFromReferenceAccordingToPath(nonUntionType: Type, paths: __String[]): Type | undefined {
+                    // Union
+                    // Intersection
+
+                    //nonUntionType.symbol.members.get("").valueDeclaration.name   /**this is IdentifierObject, maybe we need checkIdentifier? Or not, for it has been done in the progress to get type? */
+                    let result: Type | undefined;
+                    const pathsLength = paths.length;
+
+                    // if it is primitive type, it could not have any paths, and just return.
+                    if (nonUntionType.flags & TypeFlags.Primitive) {
+                        return result;
+                    }
+                    // is it must be ObjectType? For it is not primitive type?
+                    let currentSymbol = nonUntionType.symbol;
+
+                    function tryGetPropertySymbolFromSymbol(s: Symbol, propertyName: __String) {
+                        if (s.flags & SymbolFlags.Interface) {
+                            return s.members?.get(propertyName);
+                        }
+                        if (s.flags & SymbolFlags.Property) {
+                            if (s.valueDeclaration.kind === SyntaxKind.PropertySignature) {
+                                const typeNode = (<PropertySignature>s.valueDeclaration).type;
+                                if (typeNode?.kind === SyntaxKind.TypeLiteral) {
+                                    const m = (<TypeLiteralNode>typeNode).members;
+                                    //@ts-ignore
+                                    const tmp2 = m.filter(m => m?.name.text === propertyName);
+                                    if (tmp2.length > 0) { return typeNode.symbol; }
+                                    debugger;
+                                }
+                                debugger;
+                            }
+                            debugger;
+                        }
+                        if (s.flags & SymbolFlags.TypeLiteral) {
+                            return s.members?.get(propertyName);
+                        }
+                        debugger;
+                    }
+
+                    let i = 0;
+                    while (i < pathsLength) {
+                        const path = paths[i];
+                        const nextSymbol = tryGetPropertySymbolFromSymbol(currentSymbol, path);
+                        // only the property explicitly accessable is considered now.
+                        if (!nextSymbol) {
+                            break;
+                        }
+                        const type = getTypeOfSymbol(nextSymbol);
+                        // The last one could always go out. It is what we need, just return it.
+                        if (i === pathsLength - 1) {
+                            result = type;
+                            break;
+                        }
+                        // if it is not last path, and is union or intersection, do not deal with this condition now.
+                        // this could be improved, if union and all types has the property, it could go on. But it is further concerned.
+                        if (!(type.flags & TypeFlags.Primitive) && (type.flags & TypeFlags.Union || type.flags & TypeFlags.Intersection)){ // this could be improved, if union and all types has the property, it could go on.
+                            break;
+                        }
+                        currentSymbol = nextSymbol;
+                        i = i + 1;
+                    }
+                    return result;
+                }
+
                 const target = getReferenceCandidate(typeOfExpr.expression);
                 if (!isMatchingReference(reference, target)) {
                     if (strictNullChecks && optionalChainContainsReference(target, reference) && assumeTrue === (literal.text !== "undefined")) {
                         return getTypeWithFacts(type, TypeFacts.NEUndefinedOrNull);
                     }
+
+                    //#region added_useful_code
+                    // isUnionTypeNode
+                    const tmpnode = typeOfExpr.expression;   // get rid of typeof keyword.
+                    if (tmpnode.kind === SyntaxKind.PropertyAccessExpression && (<PropertyAccessExpression>tmpnode).expression.kind !== SyntaxKind.ThisKeyword && (type.flags & TypeFlags.Union)) {
+                        const depth = getTypeDepthIfMatch(tmpnode, type);
+                        if (depth >= 0) {
+                            const propertyPaths = getPropertiesOfPropertyAccessExpression(<PropertyAccessExpression>tmpnode, depth);
+                            const propertiesTypes = (<UnionType>type).types.map(type => getPropertyTypeFromReferenceAccordingToPath(type, propertyPaths));
+                            // if propertiesTypes has unedfined value, someone could not reach the path. this should be an error, and we just pass it.
+                            if (propertiesTypes.every(type => !!type)) {
+                                const tmp2 = propertiesTypes.map(propertyType => {
+                                    //we have checked, this only for pass.
+                                    if (!propertyType) throw new Error();
+
+                                    const tmp = getTypeOfStringAccordingToType(propertyType);
+                                    if (assumeTrue) {
+                                        // return true, if type contains specific type.
+                                        if (tmp.has(<TypeOfString>literal.text)) {
+                                            return true;
+                                        }
+                                        else {
+                                            return false;
+                                        }
+                                    }
+                                    else {
+                                        // return true, if type not only contains specific type
+                                        if ((tmp.has(<TypeOfString>literal.text) && tmp.size > 1) || !tmp.has(<TypeOfString>literal.text)) {
+                                            return true;
+                                        }
+                                        else {
+                                            return false;
+                                        }
+                                    }
+                                });
+                                const result = (<UnionType>type).types.filter((t, index) => {
+                                    console.log(t);
+                                    return tmp2[index];
+                                });
+                                return getUnionType(result);;
+                            }
+                            // isMatchingReference(reference, target);
+                            // // filter out all type in untion type whose property meets condition: the target type is subset of property type,
+                        }
+                    }
+                    //#endregion added_useful_code
+
                     return type;
                 }
                 if (type.flags & TypeFlags.Any && literal.text === "function") {
@@ -27965,7 +28157,7 @@ namespace ts {
                 error(expr, Diagnostics.The_operand_of_a_delete_operator_must_be_a_property_reference);
                 return booleanType;
             }
-            if (expr.kind === SyntaxKind.PropertyAccessExpression && isPrivateIdentifier(expr.name)) {
+            if (expr.kind === SyntaxKind.PropertyAccessExpression && isPrivateIdentifier((<PropertyAccessExpression>expr).name)) {
                 error(expr, Diagnostics.The_operand_of_a_delete_operator_cannot_be_a_private_identifier);
             }
             const links = getNodeLinks(expr);
@@ -29350,13 +29542,13 @@ namespace ts {
             if (quickType) {
                 return quickType;
             }
-            // If a type has been cached for the node, return it.
-            if (node.flags & NodeFlags.TypeCached && flowTypeCache) {
-                const cachedType = flowTypeCache[getNodeId(node)];
-                if (cachedType) {
-                    return cachedType;
-                }
-            }
+            // // If a type has been cached for the node, return it.
+            // if (node.flags & NodeFlags.TypeCached && flowTypeCache) {
+            //     const cachedType = flowTypeCache[getNodeId(node)];
+            //     if (cachedType) {
+            //         return cachedType;
+            //     }
+            // }
             const startInvocationCount = flowInvocationCount;
             const type = checkExpression(node);
             // If control flow analysis was required to determine the type, it is worth caching.
