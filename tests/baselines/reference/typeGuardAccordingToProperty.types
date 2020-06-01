@@ -1,0 +1,206 @@
+=== tests/cases/conformance/expressions/typeGuards/typeGuardAccordingToProperty.ts ===
+interface Test1 {
+    somekey: boolean;
+>somekey : boolean
+
+    s1: number;
+>s1 : number
+
+};
+
+interface Test2 {
+    somekey: boolean;
+>somekey : boolean
+
+    s2: number;
+>s2 : number
+
+};
+
+interface Test3 {
+    somekey: number;
+>somekey : number
+
+    s3: number;
+>s3 : number
+
+};
+
+type Union1 =Test1|Test2|Test3;
+>Union1 : Union1
+
+function f1(u: Union1){
+>f1 : (u: Union1) => void
+>u : Union1
+
+    if(typeof u.somekey !== 'boolean'){
+>typeof u.somekey !== 'boolean' : boolean
+>typeof u.somekey : "string" | "number" | "bigint" | "boolean" | "symbol" | "undefined" | "object" | "function"
+>u.somekey : number | boolean
+>u : Union1
+>somekey : number | boolean
+>'boolean' : "boolean"
+
+        u;     // Test3
+>u : Test3
+
+        u.s3;   // number
+>u.s3 : number
+>u : Test3
+>s3 : number
+    }
+    if(typeof u.somekey === 'boolean'){
+>typeof u.somekey === 'boolean' : boolean
+>typeof u.somekey : "string" | "number" | "bigint" | "boolean" | "symbol" | "undefined" | "object" | "function"
+>u.somekey : number | boolean
+>u : Union1
+>somekey : number | boolean
+>'boolean' : "boolean"
+
+        u;      // Test1 | Test2
+>u : Test1 | Test2
+
+        u.s1;   // Error
+>u.s1 : any
+>u : Test1 | Test2
+>s1 : any
+
+        u.s2;   // Error
+>u.s2 : any
+>u : Test1 | Test2
+>s2 : any
+    }
+    if(typeof u.somekey != 'boolean'){
+>typeof u.somekey != 'boolean' : boolean
+>typeof u.somekey : "string" | "number" | "bigint" | "boolean" | "symbol" | "undefined" | "object" | "function"
+>u.somekey : number | boolean
+>u : Union1
+>somekey : number | boolean
+>'boolean' : "boolean"
+
+        u;     // Test3
+>u : Test3
+
+        u.s3;
+>u.s3 : number
+>u : Test3
+>s3 : number
+    }
+    if(typeof u.somekey == 'boolean'){
+>typeof u.somekey == 'boolean' : boolean
+>typeof u.somekey : "string" | "number" | "bigint" | "boolean" | "symbol" | "undefined" | "object" | "function"
+>u.somekey : number | boolean
+>u : Union1
+>somekey : number | boolean
+>'boolean' : "boolean"
+
+        u;     // Test1 | Test2
+>u : Test1 | Test2
+
+        u.s1;   // Error
+>u.s1 : any
+>u : Test1 | Test2
+>s1 : any
+
+        u.s2;   // Error
+>u.s2 : any
+>u : Test1 | Test2
+>s2 : any
+    }
+}
+
+function f1_Plus(u: Union1){
+>f1_Plus : (u: Union1) => void
+>u : Union1
+
+    if(typeof u.somekey !== 'boolean'){
+>typeof u.somekey !== 'boolean' : boolean
+>typeof u.somekey : "string" | "number" | "bigint" | "boolean" | "symbol" | "undefined" | "object" | "function"
+>u.somekey : number | boolean
+>u : Union1
+>somekey : number | boolean
+>'boolean' : "boolean"
+
+        throw new Error();
+>new Error() : Error
+>Error : ErrorConstructor
+    }
+    u;  // Test1 | Test2
+>u : Test1 | Test2
+
+    if(typeof u.somekey === 'boolean'){
+>typeof u.somekey === 'boolean' : boolean
+>typeof u.somekey : "string" | "number" | "bigint" | "boolean" | "symbol" | "undefined" | "object" | "function"
+>u.somekey : boolean
+>u : Test1 | Test2
+>somekey : boolean
+>'boolean' : "boolean"
+
+        throw new Error();
+>new Error() : Error
+>Error : ErrorConstructor
+    }
+    u;  // never
+>u : never
+}
+
+interface A { x: string, y: string };
+>x : string
+>y : string
+
+interface B { x: number, y: number };
+>x : number
+>y : number
+
+type X = A | B;
+>X : X
+
+ function f2(bar:X){
+>f2 : (bar: X) => void
+>bar : X
+
+    if (typeof bar.x === 'string') {
+>typeof bar.x === 'string' : boolean
+>typeof bar.x : "string" | "number" | "bigint" | "boolean" | "symbol" | "undefined" | "object" | "function"
+>bar.x : string | number
+>bar : X
+>x : string | number
+>'string' : "string"
+
+        let y = bar.y; // string
+>y : string
+>bar.y : string
+>bar : A
+>y : string
+    }
+ }
+
+/////////////////////////////////////////////////////////
+//  some case that need discuss further, This is not that right.
+function f1_(u: Union1){
+>f1_ : (u: Union1) => void
+>u : Union1
+
+    const tmp1 = u.somekey;
+>tmp1 : number | boolean
+>u.somekey : number | boolean
+>u : Union1
+>somekey : number | boolean
+
+    if(typeof tmp1 !== 'boolean'){
+>typeof tmp1 !== 'boolean' : boolean
+>typeof tmp1 : "string" | "number" | "bigint" | "boolean" | "symbol" | "undefined" | "object" | "function"
+>tmp1 : number | boolean
+>'boolean' : "boolean"
+
+        u;     //Union1
+>u : Union1
+
+        u.somekey;      //number | boolean
+>u.somekey : number | boolean
+>u : Union1
+>somekey : number | boolean
+    }
+}
+
+

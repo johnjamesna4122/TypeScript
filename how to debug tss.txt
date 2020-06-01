@@ -1,4 +1,0 @@
-$env:TSS_DEBUG = 5859
-code --user-data-dir ../.vscode-debug/
-
-

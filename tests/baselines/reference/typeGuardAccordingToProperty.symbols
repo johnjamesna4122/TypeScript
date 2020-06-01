@@ -1,0 +1,189 @@
+=== tests/cases/conformance/expressions/typeGuards/typeGuardAccordingToProperty.ts ===
+interface Test1 {
+>Test1 : Symbol(Test1, Decl(typeGuardAccordingToProperty.ts, 0, 0))
+
+    somekey: boolean;
+>somekey : Symbol(Test1.somekey, Decl(typeGuardAccordingToProperty.ts, 0, 17))
+
+    s1: number;
+>s1 : Symbol(Test1.s1, Decl(typeGuardAccordingToProperty.ts, 1, 21))
+
+};
+
+interface Test2 {
+>Test2 : Symbol(Test2, Decl(typeGuardAccordingToProperty.ts, 3, 2))
+
+    somekey: boolean;
+>somekey : Symbol(Test2.somekey, Decl(typeGuardAccordingToProperty.ts, 5, 17))
+
+    s2: number;
+>s2 : Symbol(Test2.s2, Decl(typeGuardAccordingToProperty.ts, 6, 21))
+
+};
+
+interface Test3 {
+>Test3 : Symbol(Test3, Decl(typeGuardAccordingToProperty.ts, 8, 2))
+
+    somekey: number;
+>somekey : Symbol(Test3.somekey, Decl(typeGuardAccordingToProperty.ts, 10, 17))
+
+    s3: number;
+>s3 : Symbol(Test3.s3, Decl(typeGuardAccordingToProperty.ts, 11, 20))
+
+};
+
+type Union1 =Test1|Test2|Test3;
+>Union1 : Symbol(Union1, Decl(typeGuardAccordingToProperty.ts, 13, 2))
+>Test1 : Symbol(Test1, Decl(typeGuardAccordingToProperty.ts, 0, 0))
+>Test2 : Symbol(Test2, Decl(typeGuardAccordingToProperty.ts, 3, 2))
+>Test3 : Symbol(Test3, Decl(typeGuardAccordingToProperty.ts, 8, 2))
+
+function f1(u: Union1){
+>f1 : Symbol(f1, Decl(typeGuardAccordingToProperty.ts, 15, 31))
+>u : Symbol(u, Decl(typeGuardAccordingToProperty.ts, 17, 12))
+>Union1 : Symbol(Union1, Decl(typeGuardAccordingToProperty.ts, 13, 2))
+
+    if(typeof u.somekey !== 'boolean'){
+>u.somekey : Symbol(somekey, Decl(typeGuardAccordingToProperty.ts, 0, 17), Decl(typeGuardAccordingToProperty.ts, 5, 17), Decl(typeGuardAccordingToProperty.ts, 10, 17))
+>u : Symbol(u, Decl(typeGuardAccordingToProperty.ts, 17, 12))
+>somekey : Symbol(somekey, Decl(typeGuardAccordingToProperty.ts, 0, 17), Decl(typeGuardAccordingToProperty.ts, 5, 17), Decl(typeGuardAccordingToProperty.ts, 10, 17))
+
+        u;     // Test3
+>u : Symbol(u, Decl(typeGuardAccordingToProperty.ts, 17, 12))
+
+        u.s3;   // number
+>u.s3 : Symbol(Test3.s3, Decl(typeGuardAccordingToProperty.ts, 11, 20))
+>u : Symbol(u, Decl(typeGuardAccordingToProperty.ts, 17, 12))
+>s3 : Symbol(Test3.s3, Decl(typeGuardAccordingToProperty.ts, 11, 20))
+    }
+    if(typeof u.somekey === 'boolean'){
+>u.somekey : Symbol(somekey, Decl(typeGuardAccordingToProperty.ts, 0, 17), Decl(typeGuardAccordingToProperty.ts, 5, 17), Decl(typeGuardAccordingToProperty.ts, 10, 17))
+>u : Symbol(u, Decl(typeGuardAccordingToProperty.ts, 17, 12))
+>somekey : Symbol(somekey, Decl(typeGuardAccordingToProperty.ts, 0, 17), Decl(typeGuardAccordingToProperty.ts, 5, 17), Decl(typeGuardAccordingToProperty.ts, 10, 17))
+
+        u;      // Test1 | Test2
+>u : Symbol(u, Decl(typeGuardAccordingToProperty.ts, 17, 12))
+
+        u.s1;   // Error
+>u : Symbol(u, Decl(typeGuardAccordingToProperty.ts, 17, 12))
+
+        u.s2;   // Error
+>u : Symbol(u, Decl(typeGuardAccordingToProperty.ts, 17, 12))
+    }
+    if(typeof u.somekey != 'boolean'){
+>u.somekey : Symbol(somekey, Decl(typeGuardAccordingToProperty.ts, 0, 17), Decl(typeGuardAccordingToProperty.ts, 5, 17), Decl(typeGuardAccordingToProperty.ts, 10, 17))
+>u : Symbol(u, Decl(typeGuardAccordingToProperty.ts, 17, 12))
+>somekey : Symbol(somekey, Decl(typeGuardAccordingToProperty.ts, 0, 17), Decl(typeGuardAccordingToProperty.ts, 5, 17), Decl(typeGuardAccordingToProperty.ts, 10, 17))
+
+        u;     // Test3
+>u : Symbol(u, Decl(typeGuardAccordingToProperty.ts, 17, 12))
+
+        u.s3;
+>u.s3 : Symbol(Test3.s3, Decl(typeGuardAccordingToProperty.ts, 11, 20))
+>u : Symbol(u, Decl(typeGuardAccordingToProperty.ts, 17, 12))
+>s3 : Symbol(Test3.s3, Decl(typeGuardAccordingToProperty.ts, 11, 20))
+    }
+    if(typeof u.somekey == 'boolean'){
+>u.somekey : Symbol(somekey, Decl(typeGuardAccordingToProperty.ts, 0, 17), Decl(typeGuardAccordingToProperty.ts, 5, 17), Decl(typeGuardAccordingToProperty.ts, 10, 17))
+>u : Symbol(u, Decl(typeGuardAccordingToProperty.ts, 17, 12))
+>somekey : Symbol(somekey, Decl(typeGuardAccordingToProperty.ts, 0, 17), Decl(typeGuardAccordingToProperty.ts, 5, 17), Decl(typeGuardAccordingToProperty.ts, 10, 17))
+
+        u;     // Test1 | Test2
+>u : Symbol(u, Decl(typeGuardAccordingToProperty.ts, 17, 12))
+
+        u.s1;   // Error
+>u : Symbol(u, Decl(typeGuardAccordingToProperty.ts, 17, 12))
+
+        u.s2;   // Error
+>u : Symbol(u, Decl(typeGuardAccordingToProperty.ts, 17, 12))
+    }
+}
+
+function f1_Plus(u: Union1){
+>f1_Plus : Symbol(f1_Plus, Decl(typeGuardAccordingToProperty.ts, 36, 1))
+>u : Symbol(u, Decl(typeGuardAccordingToProperty.ts, 38, 17))
+>Union1 : Symbol(Union1, Decl(typeGuardAccordingToProperty.ts, 13, 2))
+
+    if(typeof u.somekey !== 'boolean'){
+>u.somekey : Symbol(somekey, Decl(typeGuardAccordingToProperty.ts, 0, 17), Decl(typeGuardAccordingToProperty.ts, 5, 17), Decl(typeGuardAccordingToProperty.ts, 10, 17))
+>u : Symbol(u, Decl(typeGuardAccordingToProperty.ts, 38, 17))
+>somekey : Symbol(somekey, Decl(typeGuardAccordingToProperty.ts, 0, 17), Decl(typeGuardAccordingToProperty.ts, 5, 17), Decl(typeGuardAccordingToProperty.ts, 10, 17))
+
+        throw new Error();
+>Error : Symbol(Error, Decl(lib.es5.d.ts, --, --), Decl(lib.es5.d.ts, --, --))
+    }
+    u;  // Test1 | Test2
+>u : Symbol(u, Decl(typeGuardAccordingToProperty.ts, 38, 17))
+
+    if(typeof u.somekey === 'boolean'){
+>u.somekey : Symbol(somekey, Decl(typeGuardAccordingToProperty.ts, 0, 17), Decl(typeGuardAccordingToProperty.ts, 5, 17))
+>u : Symbol(u, Decl(typeGuardAccordingToProperty.ts, 38, 17))
+>somekey : Symbol(somekey, Decl(typeGuardAccordingToProperty.ts, 0, 17), Decl(typeGuardAccordingToProperty.ts, 5, 17))
+
+        throw new Error();
+>Error : Symbol(Error, Decl(lib.es5.d.ts, --, --), Decl(lib.es5.d.ts, --, --))
+    }
+    u;  // never
+>u : Symbol(u, Decl(typeGuardAccordingToProperty.ts, 38, 17))
+}
+
+interface A { x: string, y: string };
+>A : Symbol(A, Decl(typeGuardAccordingToProperty.ts, 47, 1))
+>x : Symbol(A.x, Decl(typeGuardAccordingToProperty.ts, 49, 13))
+>y : Symbol(A.y, Decl(typeGuardAccordingToProperty.ts, 49, 24))
+
+interface B { x: number, y: number };
+>B : Symbol(B, Decl(typeGuardAccordingToProperty.ts, 49, 37))
+>x : Symbol(B.x, Decl(typeGuardAccordingToProperty.ts, 50, 13))
+>y : Symbol(B.y, Decl(typeGuardAccordingToProperty.ts, 50, 24))
+
+type X = A | B;
+>X : Symbol(X, Decl(typeGuardAccordingToProperty.ts, 50, 37))
+>A : Symbol(A, Decl(typeGuardAccordingToProperty.ts, 47, 1))
+>B : Symbol(B, Decl(typeGuardAccordingToProperty.ts, 49, 37))
+
+ function f2(bar:X){
+>f2 : Symbol(f2, Decl(typeGuardAccordingToProperty.ts, 51, 15))
+>bar : Symbol(bar, Decl(typeGuardAccordingToProperty.ts, 53, 13))
+>X : Symbol(X, Decl(typeGuardAccordingToProperty.ts, 50, 37))
+
+    if (typeof bar.x === 'string') {
+>bar.x : Symbol(x, Decl(typeGuardAccordingToProperty.ts, 49, 13), Decl(typeGuardAccordingToProperty.ts, 50, 13))
+>bar : Symbol(bar, Decl(typeGuardAccordingToProperty.ts, 53, 13))
+>x : Symbol(x, Decl(typeGuardAccordingToProperty.ts, 49, 13), Decl(typeGuardAccordingToProperty.ts, 50, 13))
+
+        let y = bar.y; // string
+>y : Symbol(y, Decl(typeGuardAccordingToProperty.ts, 55, 11))
+>bar.y : Symbol(A.y, Decl(typeGuardAccordingToProperty.ts, 49, 24))
+>bar : Symbol(bar, Decl(typeGuardAccordingToProperty.ts, 53, 13))
+>y : Symbol(A.y, Decl(typeGuardAccordingToProperty.ts, 49, 24))
+    }
+ }
+
+/////////////////////////////////////////////////////////
+//  some case that need discuss further, This is not that right.
+function f1_(u: Union1){
+>f1_ : Symbol(f1_, Decl(typeGuardAccordingToProperty.ts, 57, 2))
+>u : Symbol(u, Decl(typeGuardAccordingToProperty.ts, 61, 13))
+>Union1 : Symbol(Union1, Decl(typeGuardAccordingToProperty.ts, 13, 2))
+
+    const tmp1 = u.somekey;
+>tmp1 : Symbol(tmp1, Decl(typeGuardAccordingToProperty.ts, 62, 9))
+>u.somekey : Symbol(somekey, Decl(typeGuardAccordingToProperty.ts, 0, 17), Decl(typeGuardAccordingToProperty.ts, 5, 17), Decl(typeGuardAccordingToProperty.ts, 10, 17))
+>u : Symbol(u, Decl(typeGuardAccordingToProperty.ts, 61, 13))
+>somekey : Symbol(somekey, Decl(typeGuardAccordingToProperty.ts, 0, 17), Decl(typeGuardAccordingToProperty.ts, 5, 17), Decl(typeGuardAccordingToProperty.ts, 10, 17))
+
+    if(typeof tmp1 !== 'boolean'){
+>tmp1 : Symbol(tmp1, Decl(typeGuardAccordingToProperty.ts, 62, 9))
+
+        u;     //Union1
+>u : Symbol(u, Decl(typeGuardAccordingToProperty.ts, 61, 13))
+
+        u.somekey;      //number | boolean
+>u.somekey : Symbol(somekey, Decl(typeGuardAccordingToProperty.ts, 0, 17), Decl(typeGuardAccordingToProperty.ts, 5, 17), Decl(typeGuardAccordingToProperty.ts, 10, 17))
+>u : Symbol(u, Decl(typeGuardAccordingToProperty.ts, 61, 13))
+>somekey : Symbol(somekey, Decl(typeGuardAccordingToProperty.ts, 0, 17), Decl(typeGuardAccordingToProperty.ts, 5, 17), Decl(typeGuardAccordingToProperty.ts, 10, 17))
+    }
+}
+
+
