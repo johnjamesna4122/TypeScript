@@ -12949,7 +12949,7 @@ namespace ts {
         }
 
         function getPropertyNameFromIndex(indexType: Type, accessNode: StringLiteral | Identifier | PrivateIdentifier | ObjectBindingPattern | ArrayBindingPattern | ComputedPropertyName | NumericLiteral | IndexedAccessTypeNode | ElementAccessExpression | SyntheticExpression | undefined) {
-            const accessExpression = accessNode && accessNode.kind === SyntaxKind.ElementAccessExpression ? accessNode : undefined;
+            const accessExpression = accessNode?.kind === SyntaxKind.ElementAccessExpression ? accessNode : undefined;
             return isTypeUsableAsPropertyName(indexType) ?
                 getPropertyNameFromType(indexType) :
                 accessExpression && checkThatExpressionIsProperSymbolReference(accessExpression.argumentExpression, indexType, /*reportError*/ false) ?
@@ -12961,7 +12961,7 @@ namespace ts {
         }
 
         function getPropertyTypeForIndexType(originalObjectType: Type, objectType: Type, indexType: Type, fullIndexType: Type, suppressNoImplicitAnyError: boolean, accessNode: ElementAccessExpression | IndexedAccessTypeNode | PropertyName | BindingName | SyntheticExpression | undefined, accessFlags: AccessFlags) {
-            const accessExpression = accessNode && accessNode.kind === SyntaxKind.ElementAccessExpression ? accessNode : undefined;
+            const accessExpression = accessNode?.kind === SyntaxKind.ElementAccessExpression ? accessNode : undefined;
             const propName = accessNode && isPrivateIdentifier(accessNode) ? undefined : getPropertyNameFromIndex(indexType, accessNode);
             if (propName !== undefined) {
                 const prop = getPropertyOfType(objectType, propName);
@@ -20974,25 +20974,40 @@ namespace ts {
                         return result;
 
                     }
-                    while (exprTmp.kind === SyntaxKind.PropertyAccessExpression) {
+                    while (exprTmp.kind === SyntaxKind.PropertyAccessExpression || exprTmp.kind === SyntaxKind.ElementAccessExpression) {
                         result = result + 1;
-                        exprTmp = (<PropertyAccessExpression>exprTmp).expression;
+                        exprTmp = (<AccessExpression>exprTmp).expression;
                         curType = getTypeOfExpression(exprTmp);
 
-                        if (curType === type){
+                        if (curType === type) {
                             return result;
                         }
                     }
                     return -1;
                 }
 
-                // If expression is a.b.c.d, the result would be ["b","c","d"]
+                // If expression is a.b["c"].d, the result would be ["b","c","d"]
+                // NOTE: If element expression is not known in compile progress like a.b[f()].d, the result would be undefined
+                // //NOTE: this function need improvement, ElementAccessExpression argument might could be known in compile time, like "1"+"2", we should check "12" in the path, but how to get the value?
                 // if given depth, the array.length would be the length. --- this property need have pre-knowledge of expression.
-                function getPropertiesOfPropertyAccessExpression(expr: PropertyAccessExpression, depth?: number) {
+                function getPropertiesPathOfAccessExpression(expr: AccessExpression, depth?: number): __String[] | undefined {
+
                     const properties = [];
                     let exprTmp: LeftHandSideExpression = expr;
-                    while (exprTmp.kind === SyntaxKind.PropertyAccessExpression && properties.length !== depth) {
-                        properties.unshift((<PropertyAccessExpression>exprTmp).name.escapedText);
+                    let propName: __String;
+                    while ((exprTmp.kind === SyntaxKind.PropertyAccessExpression || exprTmp.kind === SyntaxKind.ElementAccessExpression) && properties.length !== depth) {
+                        if (exprTmp.kind === SyntaxKind.PropertyAccessExpression) {
+                            propName = (<PropertyAccessExpression>expr).name.escapedText;
+                        }
+                        else {
+                            if (isStringLiteralLike((<ElementAccessExpression>expr).argumentExpression)) {
+                                propName = escapeLeadingUnderscores(cast((<ElementAccessExpression>expr).argumentExpression, isLiteralExpression).text);
+                            }
+                            else {
+                                return undefined;
+                            }
+                        }
+                        properties.unshift(propName);
                         exprTmp = (<PropertyAccessExpression>exprTmp).expression;
                     }
                     return properties;
@@ -21008,7 +21023,6 @@ namespace ts {
                         if ((flags & TypeFlags.Union) && !(flags & TypeFlags.Primitive)) {
                             (<UnionType>type).types.forEach(type => getTypeOfStringAccordingToTypeWorker(type));
                         }
-
                         // base type defiend by w3c
                         if (flags & TypeFlags.StringLike) {
                             resultSet.add("string");
@@ -21025,14 +21039,18 @@ namespace ts {
                         if (flags & TypeFlags.ESSymbolLike) {
                             resultSet.add("symbol");
                         }
+                        if (flags & TypeFlags.Object && ((<ObjectType>type).symbol.declarations?.[0].kind & SyntaxKind.FunctionType)) {
+                            resultSet.add("function");
+                        }
                         // Note: boolean is union, wwhich contains two booleanLibertial
+                        // Note: this might not right if object|function or number|function?
+                        // Note: How to remove function type?
                         if (flags & TypeFlags.ObjectFlagsType && !(flags & TypeFlags.Primitive)) {
                             resultSet.add("object");
                         }
                         if (flags & TypeFlags.Undefined) {
                             resultSet.add("undefined");
                         }
-                        // where is function?
                     }
                     return resultSet;
                 }
@@ -21096,7 +21114,7 @@ namespace ts {
                         }
                         // if it is not last path, and is union or intersection, do not deal with this condition now.
                         // this could be improved, if union and all types has the property, it could go on. But it is further concerned.
-                        if (!(type.flags & TypeFlags.Primitive) && (type.flags & TypeFlags.Union || type.flags & TypeFlags.Intersection)){ // this could be improved, if union and all types has the property, it could go on.
+                        if (!(type.flags & TypeFlags.Primitive) && (type.flags & TypeFlags.Union || type.flags & TypeFlags.Intersection)) { // this could be improved, if union and all types has the property, it could go on.
                             break;
                         }
                         currentSymbol = nextSymbol;
@@ -21114,10 +21132,13 @@ namespace ts {
                     //#region added_useful_code
                     // isUnionTypeNode
                     const tmpnode = typeOfExpr.expression;   // get rid of typeof keyword.
-                    if (tmpnode.kind === SyntaxKind.PropertyAccessExpression && (<PropertyAccessExpression>tmpnode).expression.kind !== SyntaxKind.ThisKeyword && (type.flags & TypeFlags.Union)) {
+                    if ((tmpnode.kind === SyntaxKind.PropertyAccessExpression || tmpnode.kind === SyntaxKind.ElementAccessExpression) && (<PropertyAccessExpression>tmpnode).expression.kind !== SyntaxKind.ThisKeyword && (type.flags & TypeFlags.Union)) {
                         const depth = getTypeDepthIfMatch(tmpnode, type);
                         if (depth >= 0) {
-                            const propertyPaths = getPropertiesOfPropertyAccessExpression(<PropertyAccessExpression>tmpnode, depth);
+                            const propertyPaths = getPropertiesPathOfAccessExpression(<PropertyAccessExpression>tmpnode, depth);
+                            if (!propertyPaths) {
+                                return type;
+                            }
                             const propertiesTypes = (<UnionType>type).types.map(type => getPropertyTypeFromReferenceAccordingToPath(type, propertyPaths));
                             // if propertiesTypes has unedfined value, someone could not reach the path. this should be an error, and we just pass it.
                             if (propertiesTypes.every(type => !!type)) {
