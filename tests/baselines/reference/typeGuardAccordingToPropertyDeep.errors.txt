@@ -1,0 +1,62 @@
+tests/cases/conformance/expressions/typeGuards/typeGuardAccordingToPropertyDeep.ts(29,15): error TS2339: Property 'secondKey' does not exist on type 'Foo1 | Foo3'.
+  Property 'secondKey' does not exist on type 'Foo1'.
+
+
+==== tests/cases/conformance/expressions/typeGuards/typeGuardAccordingToPropertyDeep.ts (1 errors) ====
+    //// deep property access ---- a.b.c.d.e.f, a["b"]["c"]["d"]
+    //// mix deep property access ---- a.b["c"]["d"].e
+    
+    interface Foo1 {
+        firstKey: number,
+        inner: {
+            secondKey: number,
+            f1: number
+        }
+    }
+    
+    interface Foo2 {
+        firstKey: boolean,
+        inner: {
+            secondKey: number,
+            f2: number
+        }
+    }
+    
+    interface Foo3 {
+        firstKey: string;
+    }
+    
+    type Union1 = Foo1 | Foo2 | Foo3;
+    
+    function f1(u: Union1) {
+        if (typeof u.firstKey === "number" || u.firstKey === "boolean") {
+            u;  // Foo1 | Foo2
+            if (u.secondKey.innerKey === 'x') {
+                  ~~~~~~~~~
+!!! error TS2339: Property 'secondKey' does not exist on type 'Foo1 | Foo3'.
+!!! error TS2339:   Property 'secondKey' does not exist on type 'Foo1'.
+                console.log(u); // Foo2
+            }
+        }
+    }
+    
+    type Union2 = Foo1 | Foo2;
+    
+    function f2(u: Union2) {
+        if (typeof u.inner["secondKey"] === "boolean") {
+            u;  // Foo2
+        }
+    }
+    
+    function f3(u: Union2) {
+        if (typeof u["inner"]["secondKey"] === "boolean") {
+            u;  // Foo2
+        }
+    }
+    
+    function f4(u: Union2) {
+        if (typeof u["inner"].secondKey === "boolean") {
+            u;  // Foo2
+        }
+    }
+    

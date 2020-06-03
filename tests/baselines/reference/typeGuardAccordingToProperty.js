@@ -1,13 +1,10 @@
 //// [typeGuardAccordingToProperty.ts]
 // Primitive value ---- boolean bigint number string symbol undefined function object
-// ts special type like any, void, unknown, union, intersection
+// ts special type ---- any, void, unknown, union, intersection
+
 //// Property Access ---- a.b
 //// Element Access ---- a["b"]
-//// optional Access ---- a?.b, NOTE: undefined is special.
-//// calculated Element Access ---- a["b"+"c"]
-//// unknown calculated Element Access ---- a[f()]
-//// deep property access ---- a.b.c.d.e.f, a["b"]["c"]["d"]
-//// mix deep property access ---- a.b["c"]["d"].e
+
 interface Boolean1 {
     key: boolean;
     b1: number;
@@ -49,19 +46,15 @@ interface Function1 {
 }
 
 interface Obejct1 {
-    key: {};
+    key: {
+        notEmpty: number;
+    };
     o1: number;
 }
 
 type Union1 = Boolean1 | Boolean2 | Number1;
 type Union2 = Boolean1 | BigInt1 | Number1 | String1 | Symbol1 | Undefined1 | Function1 | Obejct1;
 
-function f1(u: Union1) {
-    if (typeof u.key !== 'boolean') {
-        u;      // Number1
-        u.n1;   // number
-    }
-}
 function f1_1(u: Union1) {
     if (typeof u.key !== 'boolean') {
         u;      // Number1
@@ -71,19 +64,6 @@ function f1_1(u: Union1) {
 function f1_2(u: Union1) {
     if (typeof u.key === 'boolean') {
         u;      // Bolean1 | Bolean2
-        u.b1;   // Error
-        u.b2;   // Error
-    }
-}
-function f1_3(u: Union1) {
-    if (typeof u.key != 'boolean') {
-        u;     // Test3
-        u.n1;
-    }
-}
-function f1_4(u: Union1) {
-    if (typeof u.key == 'boolean') {
-        u;     // Test1 | Test2
         u.b1;   // Error
         u.b2;   // Error
     }
@@ -102,25 +82,12 @@ function f1ElementAccess_2(u: Union1) {
         u.b2;   // Error
     }
 }
-function f1ElementAccess_3(u: Union1) {
-    if (typeof u["key"] != 'boolean') {
-        u;     // Test3
-        u.n1;
-    }
-}
-function f1ElementAccess_4(u: Union1) {
-    if (typeof u["key"] == 'boolean') {
-        u;     // Test1 | Test2
-        u.b1;   // Error
-        u.b2;   // Error
-    }
-}
 
 function f1_Plus(u: Union1) {
     if (typeof u.key !== 'boolean') {
         throw new Error();
     }
-    u;  // Test1 | Test2
+    u;  // Bolean1 | Bolean2
     if (typeof u.key === 'boolean') {
         throw new Error();
     }
@@ -133,9 +100,17 @@ function f2_1(u: Union2) {
         u;      // BigInt1
         u.bi1;
     }
+    if (typeof u.key == 'bigint') {
+        u;      // BigInt1
+        u.bi1;
+    }
 }
 function f2_2(u: Union2) {
     if (typeof u.key === 'boolean') {
+        u;      // Boolean1
+        u.b1;
+    }
+    if (typeof u.key == 'boolean') {
         u;      // Boolean1
         u.b1;
     }
@@ -145,9 +120,17 @@ function f2_3(u: Union2) {
         u;      // Number1
         u.n1;
     }
+    if (typeof u.key == 'number') {
+        u;      // Number1
+        u.n1;
+    }
 }
 function f2_4(u: Union2) {
     if (typeof u.key === 'string') {
+        u;      // String1
+        u.st1;
+    }
+    if (typeof u.key == 'string') {
         u;      // String1
         u.st1;
     }
@@ -157,9 +140,17 @@ function f2_5(u: Union2) {
         u;      // Symbol1
         u.sy1;
     }
+    if (typeof u.key == 'symbol') {
+        u;      // Symbol1
+        u.sy1;
+    }
 }
 function f2_6(u: Union2) {
     if (typeof u.key === 'undefined') {
+        u;      // Undefined1
+        u.u1
+    }
+    if (typeof u.key == 'undefined') {
         u;      // Undefined1
         u.u1
     }
@@ -169,22 +160,35 @@ function f2_7(u: Union2) {
         u;      // Function1
         u.f1;
     }
+    if (typeof u.key == 'function') {
+        u;      // Function1
+        u.f1;
+    }
 }
 function f2_8(u: Union2) {
     if (typeof u.key === 'object') {
         u;      // Object1
         u.o1;
     }
+    if (typeof u.key == 'object') {
+        u;      // Object1
+        u.o1;
+    }
 }
 
 function f2Not_1(u: Union2) {
-
     if (typeof u.key !== 'bigint') {
+        u;      // not BigInt1
+    }
+    if (typeof u.key != 'bigint') {
         u;      // not BigInt1
     }
 }
 function f2Not_2(u: Union2) {
     if (typeof u.key !== 'boolean') {
+        u;      // not Boolean1
+    }
+    if (typeof u.key != 'boolean') {
         u;      // not Boolean1
     }
 }
@@ -193,10 +197,16 @@ function f2Not_3(u: Union2) {
     if (typeof u.key !== 'number') {
         u;      // not Number1
     }
+    if (typeof u.key != 'number') {
+        u;      // not Number1
+    }
 }
 
 function f2Not_4(u: Union2) {
     if (typeof u.key !== 'string') {
+        u;      // not String1
+    }
+    if (typeof u.key != 'string') {
         u;      // not String1
     }
 }
@@ -205,10 +215,16 @@ function f2Not_5(u: Union2) {
     if (typeof u.key !== 'symbol') {
         u;      // not Symbol1
     }
+    if (typeof u.key != 'symbol') {
+        u;      // not Symbol1
+    }
 }
 
 function f2Not_6(u: Union2) {
     if (typeof u.key !== 'undefined') {
+        u;      // not Undefined1
+    }
+    if (typeof u.key != 'undefined') {
         u;      // not Undefined1
     }
 }
@@ -217,9 +233,16 @@ function f2Not_7(u: Union2) {
     if (typeof u.key !== 'function') {
         u;      // not Function1
     }
+    if (typeof u.key != 'function') {
+        u;      // not Function1
+    }
 }
+
 function f2Not_8(u: Union2) {
     if (typeof u.key !== 'object') {
+        u;      // not Object1
+    }
+    if (typeof u.key != 'object') {
         u;      // not Object1
     }
 }
@@ -246,16 +269,12 @@ function f1_(u: Union1) {
 
 
 //// [typeGuardAccordingToProperty.js]
+// Primitive value ---- boolean bigint number string symbol undefined function object
+// ts special type ---- any, void, unknown, union, intersection
 ;
 ;
 ;
 ;
-function f1(u) {
-    if (typeof u.key !== 'boolean') {
-        u; // Number1
-        u.n1; // number
-    }
-}
 function f1_1(u) {
     if (typeof u.key !== 'boolean') {
         u; // Number1
@@ -265,19 +284,6 @@ function f1_1(u) {
 function f1_2(u) {
     if (typeof u.key === 'boolean') {
         u; // Bolean1 | Bolean2
-        u.b1; // Error
-        u.b2; // Error
-    }
-}
-function f1_3(u) {
-    if (typeof u.key != 'boolean') {
-        u; // Test3
-        u.n1;
-    }
-}
-function f1_4(u) {
-    if (typeof u.key == 'boolean') {
-        u; // Test1 | Test2
         u.b1; // Error
         u.b2; // Error
     }
@@ -295,24 +301,11 @@ function f1ElementAccess_2(u) {
         u.b2; // Error
     }
 }
-function f1ElementAccess_3(u) {
-    if (typeof u["key"] != 'boolean') {
-        u; // Test3
-        u.n1;
-    }
-}
-function f1ElementAccess_4(u) {
-    if (typeof u["key"] == 'boolean') {
-        u; // Test1 | Test2
-        u.b1; // Error
-        u.b2; // Error
-    }
-}
 function f1_Plus(u) {
     if (typeof u.key !== 'boolean') {
         throw new Error();
     }
-    u; // Test1 | Test2
+    u; // Bolean1 | Bolean2
     if (typeof u.key === 'boolean') {
         throw new Error();
     }
@@ -324,9 +317,17 @@ function f2_1(u) {
         u; // BigInt1
         u.bi1;
     }
+    if (typeof u.key == 'bigint') {
+        u; // BigInt1
+        u.bi1;
+    }
 }
 function f2_2(u) {
     if (typeof u.key === 'boolean') {
+        u; // Boolean1
+        u.b1;
+    }
+    if (typeof u.key == 'boolean') {
         u; // Boolean1
         u.b1;
     }
@@ -336,9 +337,17 @@ function f2_3(u) {
         u; // Number1
         u.n1;
     }
+    if (typeof u.key == 'number') {
+        u; // Number1
+        u.n1;
+    }
 }
 function f2_4(u) {
     if (typeof u.key === 'string') {
+        u; // String1
+        u.st1;
+    }
+    if (typeof u.key == 'string') {
         u; // String1
         u.st1;
     }
@@ -348,9 +357,17 @@ function f2_5(u) {
         u; // Symbol1
         u.sy1;
     }
+    if (typeof u.key == 'symbol') {
+        u; // Symbol1
+        u.sy1;
+    }
 }
 function f2_6(u) {
     if (typeof u.key === 'undefined') {
+        u; // Undefined1
+        u.u1;
+    }
+    if (typeof u.key == 'undefined') {
         u; // Undefined1
         u.u1;
     }
@@ -360,9 +377,17 @@ function f2_7(u) {
         u; // Function1
         u.f1;
     }
+    if (typeof u.key == 'function') {
+        u; // Function1
+        u.f1;
+    }
 }
 function f2_8(u) {
     if (typeof u.key === 'object') {
+        u; // Object1
+        u.o1;
+    }
+    if (typeof u.key == 'object') {
         u; // Object1
         u.o1;
     }
@@ -371,9 +396,15 @@ function f2Not_1(u) {
     if (typeof u.key !== 'bigint') {
         u; // not BigInt1
     }
+    if (typeof u.key != 'bigint') {
+        u; // not BigInt1
+    }
 }
 function f2Not_2(u) {
     if (typeof u.key !== 'boolean') {
+        u; // not Boolean1
+    }
+    if (typeof u.key != 'boolean') {
         u; // not Boolean1
     }
 }
@@ -381,9 +412,15 @@ function f2Not_3(u) {
     if (typeof u.key !== 'number') {
         u; // not Number1
     }
+    if (typeof u.key != 'number') {
+        u; // not Number1
+    }
 }
 function f2Not_4(u) {
     if (typeof u.key !== 'string') {
+        u; // not String1
+    }
+    if (typeof u.key != 'string') {
         u; // not String1
     }
 }
@@ -391,9 +428,15 @@ function f2Not_5(u) {
     if (typeof u.key !== 'symbol') {
         u; // not Symbol1
     }
+    if (typeof u.key != 'symbol') {
+        u; // not Symbol1
+    }
 }
 function f2Not_6(u) {
     if (typeof u.key !== 'undefined') {
+        u; // not Undefined1
+    }
+    if (typeof u.key != 'undefined') {
         u; // not Undefined1
     }
 }
@@ -401,9 +444,15 @@ function f2Not_7(u) {
     if (typeof u.key !== 'function') {
         u; // not Function1
     }
+    if (typeof u.key != 'function') {
+        u; // not Function1
+    }
 }
 function f2Not_8(u) {
     if (typeof u.key !== 'object') {
+        u; // not Object1
+    }
+    if (typeof u.key != 'object') {
         u; // not Object1
     }
 }
