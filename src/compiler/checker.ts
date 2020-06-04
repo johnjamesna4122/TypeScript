@@ -20956,49 +20956,74 @@ namespace ts {
                 return type;
             }
 
+            // the expression should be like a.b?.c?.d.e.f or a
+            // a is an access expression.
+            // in which condition a.expression is not access expression if it is not the root?
+            function isAccessExpressionContainOptionalChain(e:UnaryExpression){
+                let tmp:UnaryExpression =e;
+                while(isAccessExpression(tmp)){
+                    if(tmp.flags & NodeFlags.OptionalChain)
+                    return true;
+                    tmp = tmp.expression;
+                }
+                return false;
+            }
+
             // Expression could be TypeOfExpression, discriminate expression could be added further.
             // For now, user must make sure that type is one on the path of expression.
             // for example, typeof a.b.c.d.e, type could be the type of a or b or ... or e.
             // ATTENTION! in some case, should not narrow type according to the whole path, for example:
             // typeof a.b?.c.d? !== number, === undefined, !==undefined, when we come to a, its type could only be narrowed by a.b and nothing more.
             // But for typeof a.b?.c.d? === number, when we come to a, it could be narrowed by the full path.
-            function narrowUnionTypeWithPropertyPathAndExpression(type: UnionType, accessExpressionWithOutKeyword: Expression, _assumeTrue: boolean): Type[] | undefined {
+            // Match reference should be a special case, which is not handled by this function.
+            /**
+             * @param optionalChainSlice If this is true, only match the part before first optional chain. if expression is a.b.c?.d.e, only take a.b.c to narrow.
+             */
+            function narrowUnionTypeWithPropertyPathAndExpression(type: UnionType, accessExpressionWithOutKeyword: Expression, optionalChainSlice: boolean=false): Type[] | undefined {
                 // first, judge whether path is accessable to all type.
                 // second, use expression to filter correct types
                 // third, return filtered types.
 
                 // return one non-negative number if match
-                function getTypeDepthIfMatch(expression: Expression, type: Type): number {
+                // type(Type) a.b.c
+                // reference(Node) a.b.c
+                // expression(Node) a.b.c?.d.e
+                // I think type(Type) is better than reference(Node), but it meets some conditions, especially when expression contians optional chain. a?.b would add undefined to b and it is not b. maybe we could use isTypeSubtypeOf? would this meet some other strange condition?
+                // 
+                function getTypeDepthIfMatch(expression: Expression, _type: Type): number {
                     let result = 0;
                     let exprTmp = expression;
-                    let curType;
 
-                    let exprTmp2 = expression;
-                    const p :__String[] = [];
-                    while(isAccessExpression(exprTmp2)){
-                        p.unshift((<PropertyAccessExpression>exprTmp).name.escapedText);
-                        exprTmp2 = exprTmp2.expression;
-                    }
-                    const root = exprTmp2;
-                    const roottype = getTypeOfExpression(root);
-                    const ttt = getTypeOfPropertyOfType(roottype,p[0]);
-                    ttt;
-                    // ?. would add undefined type. How to deal with it?
-                    curType = getTypeOfExpression(expression);
 
-                    if (curType === type) {
-                        return result;
-                    }
-
-                    while (exprTmp.kind === SyntaxKind.PropertyAccessExpression || exprTmp.kind === SyntaxKind.ElementAccessExpression) {
-                        result = result + 1;
-                        exprTmp = (<AccessExpression>exprTmp).expression;
-                        curType = getTypeOfExpression(exprTmp);
-
-                        if (curType === type) {
+                    while(isAccessExpression(exprTmp)){
+                        result = result +1 ;
+                        exprTmp = exprTmp.expression;
+                        if(isMatchingReference(reference, exprTmp))
+                        {
                             return result;
                         }
                     }
+
+                    // use type and expression
+                    // {
+                    //     let curType;
+                    //     // ?. would add undefined type. How to deal with it?
+                    //     curType = getTypeOfExpression(expression);
+
+                    //     if (curType === type) {
+                    //         return result;
+                    //     }
+
+                    //     while (exprTmp.kind === SyntaxKind.PropertyAccessExpression || exprTmp.kind === SyntaxKind.ElementAccessExpression) {
+                    //         result = result + 1;
+                    //         exprTmp = (<AccessExpression>exprTmp).expression;
+                    //         curType = getTypeOfExpression(exprTmp);
+
+                    //         if (curType === type) {
+                    //             return result;
+                    //         }
+                    //     }
+                    // }
                     return -1;
                 }
 
@@ -21006,7 +21031,7 @@ namespace ts {
                 // NOTE: If element expression is not known in compile progress like a.b[f()].d, the result would be undefined
                 // //NOTE: this function need improvement, ElementAccessExpression argument might could be known in compile time, like "1"+"2", we should check "12" in the path, but how to get the value?
                 // if given depth, the array.length would be the length. --- this property need have pre-knowledge of expression.
-                function getPropertyPathsOfAccessExpression(expressionOri: AccessExpression, depth?: number): __String[] | undefined {
+                function getPropertyPathsOfAccessExpression(expressionOri: AccessExpression, depth: number): __String[] | undefined {
                     const properties = [];
                     let exprTmp: LeftHandSideExpression = expressionOri;
                     let propName: __String;
@@ -21051,35 +21076,14 @@ namespace ts {
                         }
                         return result;
                     }
-                    // is it must be ObjectType? For it is not primitive type?
-                    let currentSymbol = nonUntionType.symbol;
 
-                    function tryGetPropertySymbolFromSymbol(s: Symbol, propertyName: __String) {
-                        if (s.flags & SymbolFlags.Interface) {
-                            return s.members?.get(propertyName);
-                        }
-                        if (s.flags & SymbolFlags.Property) {
-                            if (s.valueDeclaration.kind === SyntaxKind.PropertySignature) {
-                                const typeNode = (<PropertySignature>s.valueDeclaration).type;
-                                if (typeNode?.kind === SyntaxKind.TypeLiteral) {
-                                    //@ts-ignore
-                                    const targetPropertyNode = (<TypeLiteralNode>typeNode).members.find(m => m?.name.text === propertyName);
-                                    if (targetPropertyNode) { return targetPropertyNode.symbol; }
-                                }
-                            }
-                            debugger;
-                        }
-                        if (s.flags & SymbolFlags.TypeLiteral) {
-                            return s.members?.get(propertyName);
-                        }
-                        debugger;
-                    }
-
-                    let i = 0;
-                    while (i < pathsLength) {
+                    let curType = nonUntionType;
+                    for(let i = 0; i<pathsLength;i++){
                         const path = paths[i];
-                        const nextSymbol = tryGetPropertySymbolFromSymbol(currentSymbol, path);
-                        // only the property explicitly accessable is considered now.
+                        const nonNullableTypeIfStrict = getNonNullableTypeIfNeeded(curType);
+                        const nextSymbol = getPropertyOfType(nonNullableTypeIfStrict,path);
+    
+                        // if it is not accessable to all types, break;
                         if (!nextSymbol) {
                             break;
                         }
@@ -21089,20 +21093,36 @@ namespace ts {
                             result = type;
                             break;
                         }
-                        // if it is not last path, and is union or intersection, do not deal with this condition now.
-                        // this could be improved, if union and all types has the property, it could go on. But it is further concerned.
-                        if (!(type.flags & TypeFlags.Primitive) && (type.flags & TypeFlags.Union || type.flags & TypeFlags.Intersection)) { // this could be improved, if union and all types has the property, it could go on.
-                            break;
-                        }
-                        currentSymbol = nextSymbol;
-                        i = i + 1;
+                        curType = type;
                     }
+
                     return result;
                 }
 
-                // for now, TypeOfExpression is like ```typeof a.b.c.e```, need this to remove typeof.
-                const expressionWithOutKeyword = accessExpressionWithOutKeyword;
+                function tmpExpressionWithOutOptionalChain(e:Expression){
+                    let i =0;
+                    let delta=0;
+                    let tmp1 = e;
+                    while(isAccessExpression(tmp1)){
+                        i=i+1;
+                        delta+=1;
+                        if(tmp1.flags & NodeFlags.OptionalChain)
+                        {delta=0}
+                        tmp1 = tmp1.expression
+                    }
+                    i=i-delta;
+                    for(let j=0;j<i;j++){
+                        e = (<AccessExpression>e).expression;
+                    }
+                    return e;
+                }
 
+                if(optionalChainSlice){
+                    accessExpressionWithOutKeyword = tmpExpressionWithOutOptionalChain(accessExpressionWithOutKeyword);
+                }
+
+                const expressionWithOutKeyword = accessExpressionWithOutKeyword;
+                // getTypeOfNode
                 // check some condition, if not meet,  it means we could not handle this confition.
                 if ((expressionWithOutKeyword.kind !==SyntaxKind.Identifier && !isAccessExpression(expressionWithOutKeyword))){// || (<AccessExpression>expressionWithOutKeyword).expression.kind === SyntaxKind.ThisKeyword) {
                     return undefined;
@@ -21144,7 +21164,7 @@ namespace ts {
                 if (operator === SyntaxKind.ExclamationEqualsToken || operator === SyntaxKind.ExclamationEqualsEqualsToken) {
                     assumeTrue = !assumeTrue;
                 }
-                const facts = assumeTrue ?
+                let facts = assumeTrue ?
                     typeofEQFacts.get(literal.text) || TypeFacts.TypeofEQHostObject :
                     typeofNEFacts.get(literal.text) || TypeFacts.TypeofNEHostObject;
                 const target = getReferenceCandidate(typeOfExpr.expression);
@@ -21153,7 +21173,21 @@ namespace ts {
                         return getTypeWithFacts(type, TypeFacts.NEUndefinedOrNull);
                     }
                     if (type.flags & TypeFlags.Union) {
-                        const propertyTypeArray = narrowUnionTypeWithPropertyPathAndExpression(<UnionType>type, typeOfExpr.expression, assumeTrue);
+                        let propertyTypeArray:Type[]|undefined;
+
+                        const isExpressionContainOptionalChain = isAccessExpressionContainOptionalChain(typeOfExpr.expression);
+                        // !== number, === undefined, !==undefined
+                        if(assumeTrue && literal.text !== "undefined"){
+                            // use full expression to narrow
+                            propertyTypeArray = narrowUnionTypeWithPropertyPathAndExpression(<UnionType>type, typeOfExpr.expression, false);
+                        }
+                        else{
+                            // use non-OptionalChain part to narrow
+                            propertyTypeArray = narrowUnionTypeWithPropertyPathAndExpression(<UnionType>type, typeOfExpr.expression, true);
+                            if(isExpressionContainOptionalChain){
+                                facts = TypeFacts.All;
+                            }
+                        }
                         if (!propertyTypeArray) {
                             return type;
                         }
