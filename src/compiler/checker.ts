@@ -20959,11 +20959,12 @@ namespace ts {
             // the expression should be like a.b?.c?.d.e.f or a
             // a is an access expression.
             // in which condition a.expression is not access expression if it is not the root?
-            function isAccessExpressionContainOptionalChain(e:UnaryExpression){
-                let tmp:UnaryExpression =e;
-                while(isAccessExpression(tmp)){
-                    if(tmp.flags & NodeFlags.OptionalChain)
-                    return true;
+            function isAccessExpressionContainOptionalChain(e: UnaryExpression) {
+                let tmp: UnaryExpression = e;
+                while (isAccessExpression(tmp)) {
+                    if (tmp.flags & NodeFlags.OptionalChain) {
+                        return true;
+                    }
                     tmp = tmp.expression;
                 }
                 return false;
@@ -20979,7 +20980,7 @@ namespace ts {
             /**
              * @param optionalChainSlice If this is true, only match the part before first optional chain. if expression is a.b.c?.d.e, only take a.b.c to narrow.
              */
-            function narrowUnionTypeWithPropertyPathAndExpression(type: UnionType, accessExpressionWithOutKeyword: Expression, optionalChainSlice: boolean=false): Type[] | undefined {
+            function narrowUnionTypeWithPropertyPathAndExpression(type: UnionType, expressionWithOutKeyword: Expression, optionalChainSlice = false): Type[] | undefined {
                 // first, judge whether path is accessable to all type.
                 // second, use expression to filter correct types
                 // third, return filtered types.
@@ -20988,22 +20989,22 @@ namespace ts {
                 // type(Type) a.b.c
                 // reference(Node) a.b.c
                 // expression(Node) a.b.c?.d.e
-                // I think type(Type) is better than reference(Node), but it meets some conditions, especially when expression contians optional chain. a?.b would add undefined to b and it is not b. maybe we could use isTypeSubtypeOf? would this meet some other strange condition?
-                // 
+                // I think type(Type) is better than reference(Node), it might could hanle like tmp1 = a.b, typeof tmp1 === "",
+                // but it meets some conditions, especially when expression contians optional chain. a?.b would add undefined to b and it is not b. maybe we could use isTypeSubtypeOf? would this meet some other strange condition?
+                //
                 function getTypeDepthIfMatch(expression: Expression, _type: Type): number {
                     let result = 0;
                     let exprTmp = expression;
-
-
-                    while(isAccessExpression(exprTmp)){
-                        result = result +1 ;
+                    if (isMatchingReference(reference, exprTmp)) {
+                        return result;
+                    }
+                    while (isAccessExpression(exprTmp)) {
+                        result = result + 1;
                         exprTmp = exprTmp.expression;
-                        if(isMatchingReference(reference, exprTmp))
-                        {
+                        if (isMatchingReference(reference, exprTmp)) {
                             return result;
                         }
                     }
-
                     // use type and expression
                     // {
                     //     let curType;
@@ -21057,7 +21058,7 @@ namespace ts {
                 // someKey: boolean|{a:number}, path is root.someKey or root.someKey.a is different.
                 // For now if Union type and Intersction type are in path and not the last one, an error would be thrown.
                 // get one property type from one type. Return meaningful type only when the type could be accessed no ambiguously(no union on path, explicitly string and something else.)
-                function getPropertyTypeFromReferenceAccordingToPath(nonUntionType: Type, paths: __String[]): Type | undefined {
+                function getPropertyTypeFromReferenceAccordingToPath(nonUntionType: Type, paths: __String[], callExpressionFlag: boolean): Type | undefined {
                     // Union
                     // Intersection
 
@@ -21065,29 +21066,36 @@ namespace ts {
                     let result: Type | undefined;
                     const pathsLength = paths.length;
 
-                    // ! maybe we could use this!!!!!
-                    // getTypeOfPropertyOfType
+                    if (paths.length === 0) {
+                        return nonUntionType;
+                    }
 
                     // If it is primitive type, it could not have any paths.
                     // If paths is empty array, it is just the type, if not, just return.
                     if (nonUntionType.flags & TypeFlags.Primitive) {
-                        if(paths.length ===0){
+                        // Why undefined is special:
+                        // the way we narrow type is like mark true/false to type.types, if we use getNonNullableTypeIfNeeded, the number would be uncorrect, and the mark might be wrong.
+                        // 1. optional chain
+                        // 2. undefined is one keyword of typeof
+                        if (nonUntionType.flags & TypeFlags.Undefined) {   // maybe there should be === rather than &
+                            return nonUntionType;
+                        }
+                        if (nonUntionType.flags & TypeFlags.Null) {
                             return nonUntionType;
                         }
                         return result;
                     }
-
                     let curType = nonUntionType;
-                    for(let i = 0; i<pathsLength;i++){
+                    for (let i = 0; i < pathsLength; i++) {
                         const path = paths[i];
                         const nonNullableTypeIfStrict = getNonNullableTypeIfNeeded(curType);
-                        const nextSymbol = getPropertyOfType(nonNullableTypeIfStrict,path);
-    
+                        const type = getTypeOfPropertyOfType(nonNullableTypeIfStrict, path);
+
                         // if it is not accessable to all types, break;
-                        if (!nextSymbol) {
+                        if (!type) {
                             break;
                         }
-                        const type = getTypeOfSymbol(nextSymbol);
+
                         // The last one could always go out. It is what we need, just return it.
                         if (i === pathsLength - 1) {
                             result = type;
@@ -21096,53 +21104,67 @@ namespace ts {
                         curType = type;
                     }
 
+                    // here could be improved, now, we access all return type for the signature, but it could use parameter to get reduced return types.
+                    if (callExpressionFlag) {
+                        if (!result) {
+                            return;
+                        }
+                        if (result.flags & TypeFlags.Object) {
+                            const tmp = (<ObjectType>result).callSignatures?.map(getReturnTypeOfSignature);
+                            // In which condition could tmp be undefined?
+                            if (tmp) {
+                                result = getUnionType(tmp);
+                            }
+                            // if(isFunctionObjectType)
+                        }
+                    }
                     return result;
                 }
 
-                function tmpExpressionWithOutOptionalChain(e:Expression){
-                    let i =0;
-                    let delta=0;
+                function tmpExpressionWithOutOptionalChain(e: Expression) {
+                    let i = 0;
+                    let delta = 0;
                     let tmp1 = e;
-                    while(isAccessExpression(tmp1)){
-                        i=i+1;
-                        delta+=1;
-                        if(tmp1.flags & NodeFlags.OptionalChain)
-                        {delta=0}
-                        tmp1 = tmp1.expression
+                    while (isAccessExpression(tmp1)) {
+                        i = i + 1;
+                        delta += 1;
+                        if (tmp1.flags & NodeFlags.OptionalChain) { delta = 0; }
+                        tmp1 = tmp1.expression;
                     }
-                    i=i-delta;
-                    for(let j=0;j<i;j++){
+                    i = i - delta;
+                    for (let j = 0; j < i; j++) {
                         e = (<AccessExpression>e).expression;
                     }
                     return e;
                 }
 
-                if(optionalChainSlice){
-                    accessExpressionWithOutKeyword = tmpExpressionWithOutOptionalChain(accessExpressionWithOutKeyword);
+                if (optionalChainSlice) {
+                    expressionWithOutKeyword = tmpExpressionWithOutOptionalChain(expressionWithOutKeyword);
                 }
 
-                const expressionWithOutKeyword = accessExpressionWithOutKeyword;
+                let callExpressionFlag = false;
+                if (isCallExpression(expressionWithOutKeyword)) {
+                    callExpressionFlag = true;
+                    expressionWithOutKeyword = expressionWithOutKeyword.expression;
+                }
+
+                const nonCallExpressionWithOutKeyword = expressionWithOutKeyword;
                 // getTypeOfNode
                 // check some condition, if not meet,  it means we could not handle this confition.
-                if ((expressionWithOutKeyword.kind !==SyntaxKind.Identifier && !isAccessExpression(expressionWithOutKeyword))){// || (<AccessExpression>expressionWithOutKeyword).expression.kind === SyntaxKind.ThisKeyword) {
+
+                if ((nonCallExpressionWithOutKeyword.kind !== SyntaxKind.Identifier && !isAccessExpression(nonCallExpressionWithOutKeyword))) {// || (<AccessExpression>expressionWithOutKeyword).expression.kind === SyntaxKind.ThisKeyword) {
                     return undefined;
                 }
-                const depth = getTypeDepthIfMatch(expressionWithOutKeyword, type);
+                const depth = getTypeDepthIfMatch(nonCallExpressionWithOutKeyword, type);
                 if (depth < 0) {
                     return undefined;
                 }
-                let propertyPaths: __String[]|undefined;
-                if (depth > 0){
-                    propertyPaths = getPropertyPathsOfAccessExpression(<AccessExpression>expressionWithOutKeyword, depth);
-                }
-                else{
-                    propertyPaths = [];
-                }
+                const propertyPaths = getPropertyPathsOfAccessExpression(<AccessExpression>nonCallExpressionWithOutKeyword, depth);
                 if (!propertyPaths) {
                     // Not expected here should return. But for the situation not considered, I add this.
                     return undefined;
                 }
-                const propertyTypeArray = type.types.map(type => getPropertyTypeFromReferenceAccordingToPath(type, propertyPaths!));
+                const propertyTypeArray = type.types.map(type => getPropertyTypeFromReferenceAccordingToPath(type, propertyPaths!, callExpressionFlag));
                 // if propertyTypeArray has unedfined value, it means sometype in the union type could not reach the path.
                 // This should be an error which is not handled by this function, and we just not continue filter tyopes.
                 if (propertyTypeArray.some(type => !type)) {
@@ -21169,22 +21191,26 @@ namespace ts {
                     typeofNEFacts.get(literal.text) || TypeFacts.TypeofNEHostObject;
                 const target = getReferenceCandidate(typeOfExpr.expression);
                 if (!isMatchingReference(reference, target)) {
-                    if (strictNullChecks && optionalChainContainsReference(target, reference) && assumeTrue === (literal.text !== "undefined")) {
-                        return getTypeWithFacts(type, TypeFacts.NEUndefinedOrNull);
-                    }
                     if (type.flags & TypeFlags.Union) {
-                        let propertyTypeArray:Type[]|undefined;
-
+                        let propertyTypeArray: Type[] | undefined;
+                        let secondFilter = false;
                         const isExpressionContainOptionalChain = isAccessExpressionContainOptionalChain(typeOfExpr.expression);
-                        // !== number, === undefined, !==undefined
-                        if(assumeTrue && literal.text !== "undefined"){
+                        // ~undefined means other values except undefiend. boolean, bigint....
+                        if (assumeTrue && literal.text !== "undefined") {
+                            // === ~undefined
                             // use full expression to narrow
                             propertyTypeArray = narrowUnionTypeWithPropertyPathAndExpression(<UnionType>type, typeOfExpr.expression, false);
+                            secondFilter = true;            // the aim of this filter is type has 'undefined',filter it out from result.
                         }
-                        else{
+                        else {
+                            // !== ~undefined, === undefined, !==undefined
                             // use non-OptionalChain part to narrow
                             propertyTypeArray = narrowUnionTypeWithPropertyPathAndExpression(<UnionType>type, typeOfExpr.expression, true);
-                            if(isExpressionContainOptionalChain){
+                            if (!assumeTrue && literal.text === "undefined") {
+                                // !==undefined
+                                secondFilter = true;
+                            }
+                            if (isExpressionContainOptionalChain) {
                                 facts = TypeFacts.All;
                             }
                         }
@@ -21193,6 +21219,16 @@ namespace ts {
                         }
                         const tmp2 = propertyTypeArray.map(propertyType => {
                             const filteredType = getTypeWithFacts(propertyType, facts);
+                            const filteredType2 = getTypeWithFacts(propertyType, TypeFacts.NEUndefined);
+                            const filteredType3 = getTypeWithFacts(propertyType, TypeFacts.NENull);
+                            if (secondFilter) {
+                                if ((filteredType.flags & TypeFlags.Never) || (filteredType2.flags & TypeFlags.Never) || (filteredType3.flags & TypeFlags.Never)) {
+                                    return false;
+                                }
+                                else {
+                                    return true;
+                                }
+                            }
                             if (filteredType.flags & TypeFlags.Never) {
                                 return false;
                             }
@@ -21337,11 +21373,9 @@ namespace ts {
                 }
 
                 /*
-                  The implied type is the raw type suggested by a
-                  value being caught in this clause.
+                  The implied type is the raw type suggested by a value being caught in this clause.
 
-                  When the clause contains a default case we ignore
-                  the implied type and try to narrow using any facts
+                  When the clause contains a default case we ignore the implied type and try to narrow using any facts
                   we can learn: see `switchFacts`.
 
                   Example:
@@ -21353,29 +21387,59 @@ namespace ts {
                       case 'boolean': break
                   }
 
-                  In the first clause (case `number` and `string`) the
-                  implied type is number | string.
+                  In the first clause (case `number` and `string`) the implied type is number | string.
 
                   In the default clause we de not compute an implied type.
 
-                  In the third clause (case `number` and `boolean`)
-                  the naive implied type is number | boolean, however
-                  we use the type facts to narrow the implied type to
-                  boolean. We know that number cannot be selected
+                  In the third clause (case `number` and `boolean`) the naive implied type is number | boolean, however
+                  we use the type facts to narrow the implied type to boolean. We know that number cannot be selected
                   because it is caught in the first clause.
                 */
-
-                const propertyTypeArray = narrowUnionTypeWithPropertyPathAndExpression(<UnionType>type, (<TypeOfExpression>switchStatement.expression).expression, true);
+                const tmpExpression = (<TypeOfExpression>switchStatement.expression).expression;
+                const impliedType = getTypeWithFacts(getUnionType(clauseWitnesses.map(text => getImpliedTypeFromTypeofGuard(type, text) || type)), switchFacts);
+                if (isMatchingReference(reference, tmpExpression)){
+                    if (hasDefaultClause) {
+                        return filterType(type, t => (getTypeFacts(t) & switchFacts) === switchFacts);
+                    }
+                    return getTypeWithFacts(mapType(type, narrowUnionMemberByTypeof(impliedType)), switchFacts);
+                }
+                let propertyTypeArray: Type[] | undefined;
+                let secondFilter = false;
+                const isExpressionContainOptionalChain = isAccessExpressionContainOptionalChain(tmpExpression);
+                let facts = switchFacts;
+                // ~undefined means other values except undefiend. boolean, bigint....
+                if (switchFacts & TypeFacts.NEUndefined) {
+                    // === ~undefined
+                    // use full expression to narrow
+                    propertyTypeArray = narrowUnionTypeWithPropertyPathAndExpression(<UnionType>type, tmpExpression, false);
+                    secondFilter = true;            // the aim of this filter is type has 'undefined',filter it out from result.
+                }
+                else {
+                    // !== ~undefined, === undefined, !==undefined
+                    // use non-OptionalChain part to narrow
+                    propertyTypeArray = narrowUnionTypeWithPropertyPathAndExpression(<UnionType>type, tmpExpression, true);
+                    if (isExpressionContainOptionalChain) {
+                        facts = TypeFacts.All;
+                    }
+                }
                 if (!propertyTypeArray) {
                     return type;
                 }
-                const impliedType = getTypeWithFacts(getUnionType(clauseWitnesses.map(text => getImpliedTypeFromTypeofGuard(type, text) || type)), switchFacts);
                 const tmp2 = propertyTypeArray.map(propertyType => {
                     let filteredType;
                     if (hasDefaultClause) {
                         filteredType = filterType(propertyType, t => (getTypeFacts(t) & switchFacts) === switchFacts);
                     } else {
-                        filteredType = getTypeWithFacts(mapType(propertyType, narrowUnionMemberByTypeof(impliedType)), switchFacts);
+                        filteredType = getTypeWithFacts(mapType(propertyType, narrowUnionMemberByTypeof(impliedType)), facts);
+                    }
+                    const filteredType2 = getTypeWithFacts(propertyType, TypeFacts.NEUndefined);
+                    if (secondFilter) {
+                        if ((filteredType.flags & TypeFlags.Never) || (filteredType2.flags & TypeFlags.Never)) {
+                            return false;
+                        }
+                        else {
+                            return true;
+                        }
                     }
                     if (filteredType.flags & TypeFlags.Never) {
                         return false;
