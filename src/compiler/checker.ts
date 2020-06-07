@@ -19725,6 +19725,11 @@ namespace ts {
             return TypeFacts.All;
         }
 
+        /**
+         * It might work differently from what you think.
+         * For example, fact1 is "it is number1", fact2 is "it is not number1". Now given a number and facts including both fact1 and fact2,
+         * if you get correct facts from the number, then all numbers meets the condition, for 1 meets facts1, and others meets fact2.
+         */
         function getTypeWithFacts(type: Type, include: TypeFacts) {
             return filterType(type, t => (getTypeFacts(t) & include) !== 0);
         }
@@ -20614,7 +20619,7 @@ namespace ts {
                 if (isMatchingReference(reference, expr)) {
                     type = narrowTypeBySwitchOnDiscriminant(type, flow.switchStatement, flow.clauseStart, flow.clauseEnd);
                 }
-                else if (expr.kind === SyntaxKind.TypeOfExpression && isMatchingReference(reference, (expr as TypeOfExpression).expression)) {
+                else if (expr.kind === SyntaxKind.TypeOfExpression){// && isMatchingReference(reference, (expr as TypeOfExpression).expression)) {
                     type = narrowBySwitchOnTypeOf(type, flow.switchStatement, flow.clauseStart, flow.clauseEnd);
                 }
                 else {
@@ -20623,10 +20628,10 @@ namespace ts {
                             type = narrowTypeBySwitchOptionalChainContainment(type, flow.switchStatement, flow.clauseStart, flow.clauseEnd,
                                 t => !(t.flags & (TypeFlags.Undefined | TypeFlags.Never)));
                         }
-                        else if (expr.kind === SyntaxKind.TypeOfExpression && optionalChainContainsReference((expr as TypeOfExpression).expression, reference)) {
-                            type = narrowTypeBySwitchOptionalChainContainment(type, flow.switchStatement, flow.clauseStart, flow.clauseEnd,
-                                t => !(t.flags & TypeFlags.Never || t.flags & TypeFlags.StringLiteral && (<StringLiteralType>t).value === "undefined"));
-                        }
+                        // else if (expr.kind === SyntaxKind.TypeOfExpression && optionalChainContainsReference((expr as TypeOfExpression).expression, reference)) {
+                        //     type = narrowTypeBySwitchOptionalChainContainment(type, flow.switchStatement, flow.clauseStart, flow.clauseEnd,
+                        //         t => !(t.flags & TypeFlags.Never || t.flags & TypeFlags.StringLiteral && (<StringLiteralType>t).value === "undefined"));
+                        // }
                     }
                     if (isMatchingReferenceDiscriminant(expr, type)) {
                         type = narrowTypeByDiscriminant(type, expr as AccessExpression,
@@ -21150,9 +21155,10 @@ namespace ts {
 
                 const nonCallExpressionWithOutKeyword = expressionWithOutKeyword;
                 // getTypeOfNode
-                // check some condition, if not meet,  it means we could not handle this confition.
+                // check some condition, if not meet, it means we could not handle this confition.
 
                 if ((nonCallExpressionWithOutKeyword.kind !== SyntaxKind.Identifier && !isAccessExpression(nonCallExpressionWithOutKeyword))) {// || (<AccessExpression>expressionWithOutKeyword).expression.kind === SyntaxKind.ThisKeyword) {
+                    console.log("Error1\n");
                     return undefined;
                 }
                 const depth = getTypeDepthIfMatch(nonCallExpressionWithOutKeyword, type);
@@ -21162,9 +21168,10 @@ namespace ts {
                 const propertyPaths = getPropertyPathsOfAccessExpression(<AccessExpression>nonCallExpressionWithOutKeyword, depth);
                 if (!propertyPaths) {
                     // Not expected here should return. But for the situation not considered, I add this.
+                    console.log("Error2\n");
                     return undefined;
                 }
-                const propertyTypeArray = type.types.map(type => getPropertyTypeFromReferenceAccordingToPath(type, propertyPaths!, callExpressionFlag));
+                const propertyTypeArray = type.types.map(type => getPropertyTypeFromReferenceAccordingToPath(type, propertyPaths, callExpressionFlag));
                 // if propertyTypeArray has unedfined value, it means sometype in the union type could not reach the path.
                 // This should be an error which is not handled by this function, and we just not continue filter tyopes.
                 if (propertyTypeArray.some(type => !type)) {
@@ -21193,47 +21200,37 @@ namespace ts {
                 if (!isMatchingReference(reference, target)) {
                     if (type.flags & TypeFlags.Union) {
                         let propertyTypeArray: Type[] | undefined;
-                        let secondFilter = false;
+                        let notNullOrUndefinedFilter = false;  // the aim of this filter is type has 'undefined',filter it out from result.
                         const isExpressionContainOptionalChain = isAccessExpressionContainOptionalChain(typeOfExpr.expression);
                         // ~undefined means other values except undefiend. boolean, bigint....
-                        if (assumeTrue && literal.text !== "undefined") {
+                        if ((assumeTrue && literal.text !== "undefined") || (!assumeTrue && literal.text === "undefined")) {
+                            // !== undefined
                             // === ~undefined
                             // use full expression to narrow
-                            propertyTypeArray = narrowUnionTypeWithPropertyPathAndExpression(<UnionType>type, typeOfExpr.expression, false);
-                            secondFilter = true;            // the aim of this filter is type has 'undefined',filter it out from result.
+                            propertyTypeArray = narrowUnionTypeWithPropertyPathAndExpression(<UnionType>type, typeOfExpr.expression,/* optionalChainSlice */ false);
+                            notNullOrUndefinedFilter = true;
                         }
                         else {
-                            // !== ~undefined, === undefined, !==undefined
+                            // !== ~undefined, === undefined
                             // use non-OptionalChain part to narrow
-                            propertyTypeArray = narrowUnionTypeWithPropertyPathAndExpression(<UnionType>type, typeOfExpr.expression, true);
-                            if (!assumeTrue && literal.text === "undefined") {
-                                // !==undefined
-                                secondFilter = true;
-                            }
+                            propertyTypeArray = narrowUnionTypeWithPropertyPathAndExpression(<UnionType>type, typeOfExpr.expression,/* optionalChainSlice */ true);
                             if (isExpressionContainOptionalChain) {
-                                facts = TypeFacts.All;
+                                facts = TypeFacts.None;     // The aim is no filter.
                             }
                         }
                         if (!propertyTypeArray) {
                             return type;
                         }
                         const tmp2 = propertyTypeArray.map(propertyType => {
-                            const filteredType = getTypeWithFacts(propertyType, facts);
-                            const filteredType2 = getTypeWithFacts(propertyType, TypeFacts.NEUndefined);
-                            const filteredType3 = getTypeWithFacts(propertyType, TypeFacts.NENull);
-                            if (secondFilter) {
-                                if ((filteredType.flags & TypeFlags.Never) || (filteredType2.flags & TypeFlags.Never) || (filteredType3.flags & TypeFlags.Never)) {
-                                    return false;
-                                }
-                                else {
-                                    return true;
-                                }
+                            const propertyTypeFacts = getTypeFacts(propertyType);
+                            if (notNullOrUndefinedFilter) {
+                                facts |= TypeFacts.NEUndefined | TypeFacts.NENull;
                             }
-                            if (filteredType.flags & TypeFlags.Never) {
-                                return false;
+                            if ((propertyTypeFacts & facts) === facts) {
+                                return true;
                             }
                             else {
-                                return true;
+                                return false;
                             }
                         });
                         const result = (<UnionType>type).types.filter((_t, index) => {
@@ -21397,55 +21394,53 @@ namespace ts {
                 */
                 const tmpExpression = (<TypeOfExpression>switchStatement.expression).expression;
                 const impliedType = getTypeWithFacts(getUnionType(clauseWitnesses.map(text => getImpliedTypeFromTypeofGuard(type, text) || type)), switchFacts);
-                if (isMatchingReference(reference, tmpExpression)){
+                if (isMatchingReference(reference, tmpExpression)) {
                     if (hasDefaultClause) {
                         return filterType(type, t => (getTypeFacts(t) & switchFacts) === switchFacts);
                     }
                     return getTypeWithFacts(mapType(type, narrowUnionMemberByTypeof(impliedType)), switchFacts);
                 }
                 let propertyTypeArray: Type[] | undefined;
-                let secondFilter = false;
+                let notNullOrUndefinedFilter = false;
                 const isExpressionContainOptionalChain = isAccessExpressionContainOptionalChain(tmpExpression);
                 let facts = switchFacts;
+
                 // ~undefined means other values except undefiend. boolean, bigint....
-                if (switchFacts & TypeFacts.NEUndefined) {
-                    // === ~undefined
+                if (facts & 0b111111 && !(facts & TypeFacts.EQUndefined)) {
+                    // === ~undefined and not === undefiend
                     // use full expression to narrow
-                    propertyTypeArray = narrowUnionTypeWithPropertyPathAndExpression(<UnionType>type, tmpExpression, false);
-                    secondFilter = true;            // the aim of this filter is type has 'undefined',filter it out from result.
+                    propertyTypeArray = narrowUnionTypeWithPropertyPathAndExpression(<UnionType>type, tmpExpression, /* optionalChainSlice */ false);
+                    notNullOrUndefinedFilter = true;
                 }
                 else {
                     // !== ~undefined, === undefined, !==undefined
                     // use non-OptionalChain part to narrow
-                    propertyTypeArray = narrowUnionTypeWithPropertyPathAndExpression(<UnionType>type, tmpExpression, true);
+                    propertyTypeArray = narrowUnionTypeWithPropertyPathAndExpression(<UnionType>type, tmpExpression, /* optionalChainSlice */ true);
+                    if (facts & TypeFacts.NEUndefined) {
+                        // !== undefined
+                        notNullOrUndefinedFilter = true;
+                    }
                     if (isExpressionContainOptionalChain) {
-                        facts = TypeFacts.All;
+                        facts = TypeFacts.All;     // The aim is no filter.
                     }
                 }
                 if (!propertyTypeArray) {
-                    return type;
+                    return type;                    // return type;
                 }
                 const tmp2 = propertyTypeArray.map(propertyType => {
-                    let filteredType;
-                    if (hasDefaultClause) {
-                        filteredType = filterType(propertyType, t => (getTypeFacts(t) & switchFacts) === switchFacts);
-                    } else {
-                        filteredType = getTypeWithFacts(mapType(propertyType, narrowUnionMemberByTypeof(impliedType)), facts);
-                    }
-                    const filteredType2 = getTypeWithFacts(propertyType, TypeFacts.NEUndefined);
-                    if (secondFilter) {
-                        if ((filteredType.flags & TypeFlags.Never) || (filteredType2.flags & TypeFlags.Never)) {
-                            return false;
-                        }
-                        else {
-                            return true;
-                        }
-                    }
-                    if (filteredType.flags & TypeFlags.Never) {
-                        return false;
+                    const propertyTypeFacts = getTypeFacts(propertyType);
+                    let secondFacts: TypeFacts;
+                    if (notNullOrUndefinedFilter) {
+                        secondFacts = TypeFacts.NEUndefinedOrNull;
                     }
                     else {
+                        secondFacts = TypeFacts.None;        // The aim is no filter.
+                    }
+                    if ((propertyTypeFacts & facts) && (propertyTypeFacts & secondFacts) === secondFacts) {
                         return true;
+                    }
+                    else {
+                        return false;
                     }
                 });
                 const result = (<UnionType>type).types.filter((_t, index) => {
@@ -29675,12 +29670,12 @@ namespace ts {
             }
             // If a type has been cached for the node, return it.
             // Note: this is not only cache, without this, some test case would always runs, such as binaryArithmeticControlFlowGraphNotTooLarge.
-            // if (node.flags & NodeFlags.TypeCached && flowTypeCache) {
-            //     const cachedType = flowTypeCache[getNodeId(node)];
-            //     if (cachedType) {
-            //         return cachedType;
-            //     }
-            // }
+            if (node.flags & NodeFlags.TypeCached && flowTypeCache) {
+                const cachedType = flowTypeCache[getNodeId(node)];
+                if (cachedType) {
+                    return cachedType;
+                }
+            }
             const startInvocationCount = flowInvocationCount;
             const type = checkExpression(node);
             // If control flow analysis was required to determine the type, it is worth caching.

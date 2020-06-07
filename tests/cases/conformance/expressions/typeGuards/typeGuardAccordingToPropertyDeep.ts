@@ -1,4 +1,4 @@
-// @strictNullChecks: true
+// @strict: true
 
 //// deep property access ---- a.b.c.d.e.f, a["b"]["c"]["d"]
 //// mix deep property access ---- a.b["c"]["d"].e

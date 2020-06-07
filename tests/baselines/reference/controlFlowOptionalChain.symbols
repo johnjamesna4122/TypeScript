@@ -1642,7 +1642,7 @@ function f41(o: Thing | undefined) {
 
             break;
         default:
-            o.foo;  // Error
+            o.foo;
 >o.foo : Symbol(foo, Decl(controlFlowOptionalChain.ts, 161, 14))
 >o : Symbol(o, Decl(controlFlowOptionalChain.ts, 505, 13))
 >foo : Symbol(foo, Decl(controlFlowOptionalChain.ts, 161, 14))

@@ -269,6 +269,7 @@ function f1_(u: Union1) {
 
 
 //// [typeGuardAccordingToProperty.js]
+"use strict";
 // Primitive value ---- boolean bigint number string symbol undefined function object
 // ts special type ---- any, void, unknown, union, intersection
 ;

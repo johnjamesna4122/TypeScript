@@ -1858,9 +1858,9 @@ function f41(o: Thing | undefined) {
 
             break;
         default:
-            o.foo;  // Error
+            o.foo;
 >o.foo : never
->o : Thing | undefined
+>o : Thing
 >foo : never
 
             break;

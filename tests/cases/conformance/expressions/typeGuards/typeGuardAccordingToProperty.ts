@@ -1,4 +1,4 @@
-// @strictNullChecks: true
+// @strict: true
 
 // Primitive value ---- boolean bigint number string symbol undefined function object
 // ts special type ---- any, void, unknown, union, intersection
