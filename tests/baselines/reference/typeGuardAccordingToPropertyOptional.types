@@ -1,12 +1,12 @@
 === tests/cases/conformance/expressions/typeGuards/typeGuardAccordingToPropertyOptional.ts ===
 interface Foo1 {
-    key1:{
+    key1: {
 >key1 : { key2: number; } | undefined
 
-        key2:number;
+        key2: number;
 >key2 : number
 
-    }|undefined;
+    } | undefined;
     f1: number;
 >f1 : number
 }
@@ -15,7 +15,7 @@ interface Foo2 {
     key1: {
 >key1 : { key2: string; } | undefined
 
-        key2:string
+        key2: string
 >key2 : string
 
     } | undefined;
@@ -24,10 +24,10 @@ interface Foo2 {
 }
 
 interface Foo3 {
-    key1:{
+    key1: {
 >key1 : { key2: number; }
 
-        key2:number;
+        key2: number;
 >key2 : number
 
     };
@@ -38,7 +38,7 @@ interface Foo3 {
 type U1 = Foo1 | Foo2 | Foo3;
 >U1 : U1
 
-type U2 = Foo1 | Foo2 | Foo3|undefined;
+type U2 = Foo1 | Foo2 | Foo3 | undefined;
 >U2 : U2
 
 // unnecessary optional chain
@@ -54,8 +54,12 @@ function f1(u: U1) {
 >key1 : { key2: number; } | { key2: string; } | { key2: number; } | undefined
 >'number' : "number"
 
-        u;  // U1
+        u.key1.key2;
+>u.key1.key2 : string | number
+>u.key1 : { key2: number; } | { key2: string; } | { key2: number; } | undefined
 >u : U1
+>key1 : { key2: number; } | { key2: string; } | { key2: number; } | undefined
+>key2 : string | number
     }
     if (typeof u?.key1 === 'number') {
 >typeof u?.key1 === 'number' : boolean
@@ -65,8 +69,12 @@ function f1(u: U1) {
 >key1 : { key2: number; } | { key2: string; } | { key2: number; } | undefined
 >'number' : "number"
 
-        u;  // never
+        u.key1.key2;
+>u.key1.key2 : any
+>u.key1 : any
 >u : never
+>key1 : any
+>key2 : any
     }
     if (typeof u?.key1 !== 'undefined') {
 >typeof u?.key1 !== 'undefined' : boolean
@@ -76,8 +84,12 @@ function f1(u: U1) {
 >key1 : { key2: number; } | { key2: string; } | { key2: number; } | undefined
 >'undefined' : "undefined"
 
-        u;  // U1
+        u.key1.key2;
+>u.key1.key2 : string | number
+>u.key1 : { key2: number; } | { key2: string; } | { key2: number; }
 >u : U1
+>key1 : { key2: number; } | { key2: string; } | { key2: number; }
+>key2 : string | number
     }
     if (typeof u?.key1 === 'undefined') {
 >typeof u?.key1 === 'undefined' : boolean
@@ -87,8 +99,12 @@ function f1(u: U1) {
 >key1 : { key2: number; } | { key2: string; } | { key2: number; } | undefined
 >'undefined' : "undefined"
 
-        u;  // U1
+        u.key1.key2;
+>u.key1.key2 : any
+>u.key1 : undefined
 >u : U1
+>key1 : undefined
+>key2 : any
     }
 }
 
@@ -107,8 +123,12 @@ function f2(u: U1) {
 >key2 : string | number | undefined
 >'number' : "number"
 
-        u;  // U1
+        u.key1.key2;
+>u.key1.key2 : string
+>u.key1 : { key2: number; } | { key2: string; } | { key2: number; } | undefined
 >u : U1
+>key1 : { key2: number; } | { key2: string; } | { key2: number; } | undefined
+>key2 : string
     }
     if (typeof u.key1?.key2 === 'number') {
 >typeof u.key1?.key2 === 'number' : boolean
@@ -120,8 +140,12 @@ function f2(u: U1) {
 >key2 : string | number | undefined
 >'number' : "number"
 
-        u;  // Foo1 | Foo3
+        u.key1.key2;
+>u.key1.key2 : number
+>u.key1 : { key2: number; } | { key2: number; }
 >u : Foo1 | Foo3
+>key1 : { key2: number; } | { key2: number; }
+>key2 : number
     }
     if (typeof u.key1?.key2 !== 'undefined') {
 >typeof u.key1?.key2 !== 'undefined' : boolean
@@ -133,8 +157,12 @@ function f2(u: U1) {
 >key2 : string | number | undefined
 >'undefined' : "undefined"
 
-        u;  // U1
+        u.key1.key2;
+>u.key1.key2 : string | number
+>u.key1 : { key2: number; } | { key2: string; } | { key2: number; }
 >u : U1
+>key1 : { key2: number; } | { key2: string; } | { key2: number; }
+>key2 : string | number
     }
     if (typeof u.key1?.key2 === 'undefined') {
 >typeof u.key1?.key2 === 'undefined' : boolean
@@ -146,12 +174,16 @@ function f2(u: U1) {
 >key2 : string | number | undefined
 >'undefined' : "undefined"
 
-        u;  // U1
+        u.key1.key2;
+>u.key1.key2 : never
+>u.key1 : { key2: number; } | { key2: string; } | { key2: number; } | undefined
 >u : U1
+>key1 : { key2: number; } | { key2: string; } | { key2: number; } | undefined
+>key2 : never
     }
 }
 
-function f2Plus(u: U1){
+function f2Plus(u: U1) {
 >f2Plus : (u: U1) => void
 >u : U1
 
@@ -173,9 +205,6 @@ function f2Plus(u: U1){
 >key1 : { key2: number; } | { key2: string; } | { key2: number; } | undefined
 >key2 : undefined
 >'number' : "number"
-
-        u;  // Foo1 | Foo3
->u : Foo1 | Foo3
 
         u.key1.key2;
 >u.key1.key2 : never
@@ -203,9 +232,6 @@ function f2Plus(u: U1){
 >key2 : string | number
 >'number' : "number"
 
-        u;  // U1
->u : U1
-
         u.key1.key2;    // Error
 >u.key1.key2 : number
 >u.key1 : { key2: number; } | { key2: string; } | { key2: number; } | undefined
@@ -213,7 +239,7 @@ function f2Plus(u: U1){
 >key1 : { key2: number; } | { key2: string; } | { key2: number; } | undefined
 >key2 : number
     }
-    if ( typeof u.key1?.key2 === 'number' && typeof u.key1?.key2 === 'undefined') {
+    if (typeof u.key1?.key2 === 'number' && typeof u.key1?.key2 === 'undefined') {
 >typeof u.key1?.key2 === 'number' && typeof u.key1?.key2 === 'undefined' : boolean
 >typeof u.key1?.key2 === 'number' : boolean
 >typeof u.key1?.key2 : "string" | "number" | "bigint" | "boolean" | "symbol" | "undefined" | "object" | "function"
@@ -232,9 +258,6 @@ function f2Plus(u: U1){
 >key2 : number
 >'undefined' : "undefined"
 
-        u;  // Foo1 | Foo3
->u : Foo1 | Foo3
-
         u.key1.key2;
 >u.key1.key2 : never
 >u.key1 : { key2: number; }
@@ -242,7 +265,7 @@ function f2Plus(u: U1){
 >key1 : { key2: number; }
 >key2 : never
     }
-    if ( typeof u.key1?.key2 === 'number' || typeof u.key1?.key2 === 'undefined') {
+    if (typeof u.key1?.key2 === 'number' || typeof u.key1?.key2 === 'undefined') {
 >typeof u.key1?.key2 === 'number' || typeof u.key1?.key2 === 'undefined' : boolean
 >typeof u.key1?.key2 === 'number' : boolean
 >typeof u.key1?.key2 : "string" | "number" | "bigint" | "boolean" | "symbol" | "undefined" | "object" | "function"
@@ -261,9 +284,6 @@ function f2Plus(u: U1){
 >key2 : string | undefined
 >'undefined' : "undefined"
 
-        u;  // U1
->u : U1
-
         u.key1.key2;    // Error
 >u.key1.key2 : number
 >u.key1 : { key2: number; } | { key2: string; } | { key2: number; } | undefined
@@ -271,7 +291,7 @@ function f2Plus(u: U1){
 >key1 : { key2: number; } | { key2: string; } | { key2: number; } | undefined
 >key2 : number
     }
-    if ( typeof u.key1?.key2 === 'number' || typeof u.key1?.key2 !== 'undefined') {
+    if (typeof u.key1?.key2 === 'number' || typeof u.key1?.key2 !== 'undefined') {
 >typeof u.key1?.key2 === 'number' || typeof u.key1?.key2 !== 'undefined' : boolean
 >typeof u.key1?.key2 === 'number' : boolean
 >typeof u.key1?.key2 : "string" | "number" | "bigint" | "boolean" | "symbol" | "undefined" | "object" | "function"
@@ -289,9 +309,6 @@ function f2Plus(u: U1){
 >key1 : { key2: number; } | { key2: string; } | { key2: number; } | undefined
 >key2 : string | undefined
 >'undefined' : "undefined"
-
-        u;  // U1
->u : U1
 
         u.key1.key2;
 >u.key1.key2 : string | number
@@ -315,9 +332,6 @@ function f3(u: U2) {
 >key1 : { key2: number; } | { key2: string; } | { key2: number; } | undefined
 >'number' : "number"
 
-        u;  // U2
->u : U2
-
         u.key1.key2;
 >u.key1.key2 : string | number
 >u.key1 : { key2: number; } | { key2: string; } | { key2: number; } | undefined
@@ -332,9 +346,6 @@ function f3(u: U2) {
 >u : U2
 >key1 : { key2: number; } | { key2: string; } | { key2: number; } | undefined
 >'number' : "number"
-
-        u;  // never
->u : never
 
         u.key1.key2;
 >u.key1.key2 : any
@@ -351,9 +362,6 @@ function f3(u: U2) {
 >key1 : { key2: number; } | { key2: string; } | { key2: number; } | undefined
 >'undefined' : "undefined"
 
-        u;  // Foo1 | Foo2 | Foo3
->u : U1
-
         u.key1.key2;
 >u.key1.key2 : string | number
 >u.key1 : { key2: number; } | { key2: string; } | { key2: number; }
@@ -369,9 +377,6 @@ function f3(u: U2) {
 >key1 : { key2: number; } | { key2: string; } | { key2: number; } | undefined
 >'undefined' : "undefined"
 
-        u;  // U2
->u : U2
-
         u.key1.key2;
 >u.key1.key2 : any
 >u.key1 : undefined
@@ -381,6 +386,7 @@ function f3(u: U2) {
     }
 }
 
+// multi optional chain
 function f4(u: U2) {
 >f4 : (u: U2) => void
 >u : U2
@@ -394,9 +400,6 @@ function f4(u: U2) {
 >key1 : { key2: number; } | { key2: string; } | { key2: number; } | undefined
 >key2 : string | number | undefined
 >'number' : "number"
-
-        u;  // U2
->u : U2
 
         u.key1.key2;
 >u.key1.key2 : string
@@ -415,9 +418,6 @@ function f4(u: U2) {
 >key2 : string | number | undefined
 >'number' : "number"
 
-        u;  // Foo1 | Foo3
->u : Foo1 | Foo3
-
         u.key1.key2;
 >u.key1.key2 : number
 >u.key1 : { key2: number; } | { key2: number; }
@@ -435,9 +435,6 @@ function f4(u: U2) {
 >key2 : string | number | undefined
 >'undefined' : "undefined"
 
-        u;  // Foo1 | Foo2 | Foo3
->u : U1
-
         u.key1.key2;
 >u.key1.key2 : string | number
 >u.key1 : { key2: number; } | { key2: string; } | { key2: number; }
@@ -454,9 +451,6 @@ function f4(u: U2) {
 >key1 : { key2: number; } | { key2: string; } | { key2: number; } | undefined
 >key2 : string | number | undefined
 >'undefined' : "undefined"
-
-        u;  // U2
->u : U2
 
         u.key1.key2;
 >u.key1.key2 : never
