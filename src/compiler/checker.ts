@@ -19550,17 +19550,22 @@ namespace ts {
             return false;
         }
 
+        function isDiscriminantSymbol(symbol: Symbol | undefined) {
+            if (symbol && getCheckFlags(symbol) & CheckFlags.SyntheticProperty) {
+                if ((<TransientSymbol>symbol).isDiscriminantProperty === undefined) {
+                    (<TransientSymbol>symbol).isDiscriminantProperty =
+                        ((<TransientSymbol>symbol).checkFlags & CheckFlags.Discriminant) === CheckFlags.Discriminant &&
+                        !maybeTypeOfKind(getTypeOfSymbol(symbol), TypeFlags.Instantiable);
+                }
+                return !!(<TransientSymbol>symbol).isDiscriminantProperty;
+            }
+            return false;
+        }
+
         function isDiscriminantProperty(type: Type | undefined, name: __String) {
             if (type && type.flags & TypeFlags.Union) {
                 const prop = getUnionOrIntersectionProperty(<UnionType>type, name);
-                if (prop && getCheckFlags(prop) & CheckFlags.SyntheticProperty) {
-                    if ((<TransientSymbol>prop).isDiscriminantProperty === undefined) {
-                        (<TransientSymbol>prop).isDiscriminantProperty =
-                            ((<TransientSymbol>prop).checkFlags & CheckFlags.Discriminant) === CheckFlags.Discriminant &&
-                            !maybeTypeOfKind(getTypeOfSymbol(prop), TypeFlags.Instantiable);
-                    }
-                    return !!(<TransientSymbol>prop).isDiscriminantProperty;
-                }
+                return isDiscriminantSymbol(prop);
             }
             return false;
         }
@@ -20790,6 +20795,69 @@ namespace ts {
                 return isMatchingReference(reference, expr.expression) && isDiscriminantProperty(type, name);
             }
 
+
+
+            function isMatchingReferenceDiscriminantNew(expr: Expression, computedType: Type) {
+
+                // main part is copied from function createUnionOrIntersectionProperty
+                function judgeWhetherDiscriminantFromSymbolArray(types: Type[]) {
+                    let checkFlags = 0;
+                    let firstType: Type | undefined;
+                    for (const type of types) {
+                        if (!firstType) {
+                            firstType = type;
+                        }
+                        else if (type !== firstType) {
+                            checkFlags |= CheckFlags.HasNonUniformType;
+                        }
+                        if (isLiteralType(type)) {
+                            checkFlags |= CheckFlags.HasLiteralType;
+                        }
+                        if (type.flags & TypeFlags.Never) {
+                            checkFlags |= CheckFlags.HasNeverType;
+                        }
+                    }
+                    return checkFlags;
+                }
+
+                const type = declaredType.flags & TypeFlags.Union ? declaredType : computedType;
+                if (!(type.flags & TypeFlags.Union) || !isAccessExpression(expr)) {
+                    return false;
+                }
+                const propertyTypeArray = narrowUnionTypeWithPropertyPathAndExpression(<UnionType>type, expr);
+                if (!propertyTypeArray) {
+                    return false;
+                }
+                const checkFlag = judgeWhetherDiscriminantFromSymbolArray(propertyTypeArray);
+                return (checkFlag & CheckFlags.Discriminant) === CheckFlags.Discriminant;
+            }
+
+            function narrowTypeByDiscriminantNew(type: Type, access: AccessExpression, narrowTypeCb: (t: Type) => Type): Type {
+                const propertyTypeArray = narrowUnionTypeWithPropertyPathAndExpression(<UnionType>type, access);
+                if (!propertyTypeArray) {
+                    return type;
+                }
+                const tmp: Type[] = [];
+                propertyTypeArray.forEach(type => {
+                    if (type.flags & TypeFlags.Union) {
+                        (type as UnionType).types.forEach(t => tmp.push(t));
+                    }
+                    else tmp.push(type);
+                });
+                const bigUnion = getUnionType(tmp);
+                const narrowedPropType = narrowTypeCb(bigUnion);
+                const tmp2 = propertyTypeArray.map(propertyType => {
+                    if (isTypeComparableTo(propertyType, narrowedPropType)) {
+                        return true;
+                    }
+                    else return false;
+                });
+                const result = (<UnionType>type).types.filter((_t, index) => {
+                    return tmp2[index];
+                });
+                return getUnionType(result);
+            }
+
             function narrowTypeByDiscriminant(type: Type, access: AccessExpression, narrowTypeCb: (t: Type) => Type): Type {
                 const propName = getAccessedPropertyName(access);
                 if (propName === undefined) {
@@ -20869,11 +20937,11 @@ namespace ts {
                                 type = narrowTypeByOptionalChainContainment(type, operator, left, assumeTrue);
                             }
                         }
-                        if (isMatchingReferenceDiscriminant(left, type)) {
-                            return narrowTypeByDiscriminant(type, <AccessExpression>left, t => narrowTypeByEquality(t, operator, right, assumeTrue));
+                        if (isMatchingReferenceDiscriminantNew(left, type)) {
+                            return narrowTypeByDiscriminantNew(type, <AccessExpression>left, t => narrowTypeByEquality(t, operator, right, assumeTrue));
                         }
-                        if (isMatchingReferenceDiscriminant(right, type)) {
-                            return narrowTypeByDiscriminant(type, <AccessExpression>right, t => narrowTypeByEquality(t, operator, left, assumeTrue));
+                        if (isMatchingReferenceDiscriminantNew(right, type)) {
+                            return narrowTypeByDiscriminantNew(type, <AccessExpression>right, t => narrowTypeByEquality(t, operator, left, assumeTrue));
                         }
                         if (isMatchingConstructorReference(left)) {
                             return narrowTypeByConstructor(type, operator, right, assumeTrue);
@@ -20975,6 +21043,7 @@ namespace ts {
                 return false;
             }
 
+
             // Expression could be TypeOfExpression, discriminate expression could be added further.
             // For now, user must make sure that type is one on the path of expression.
             // for example, typeof a.b.c.d.e, type could be the type of a or b or ... or e.
@@ -20990,74 +21059,84 @@ namespace ts {
                 // second, use expression to filter correct types
                 // third, return filtered types.
 
-                // return one non-negative number if match
-                // type(Type) a.b.c
-                // reference(Node) a.b.c
-                // expression(Node) a.b.c?.d.e
-                // I think type(Type) is better than reference(Node), it might could hanle like tmp1 = a.b, typeof tmp1 === "",
-                // but it meets some conditions, especially when expression contians optional chain. a?.b would add undefined to b and it is not b. maybe we could use isTypeSubtypeOf? would this meet some other strange condition?
-                //
-                function getTypeDepthIfMatch(expression: Expression, _type: Type): number {
-                    let result = 0;
-                    let exprTmp = expression;
-                    if (isMatchingReference(reference, exprTmp)) {
-                        return result;
-                    }
-                    while (isAccessExpression(exprTmp)) {
-                        result = result + 1;
-                        exprTmp = exprTmp.expression;
+                function tryGetPropertyPathsOfReferenceFromAccessExpression(expressionOri: Expression, _ref?: Node) {
+                    // return one non-negative number if match
+                    // type(Type) a.b.c
+                    // reference(Node) a.b.c
+                    // expression(Node) a.b.c?.d.e
+                    // I think type(Type) is better than reference(Node), it might could hanle like tmp1 = a.b, typeof tmp1 === "",
+                    // but it meets some conditions, especially when expression contians optional chain. a?.b would add undefined to b and it is not b. maybe we could use isTypeSubtypeOf? would this meet some other strange condition?
+                    //
+                    function getTypeDepthIfMatch(expression: Expression, _type?: Type): number {
+                        let result = 0;
+                        let exprTmp = expression;
                         if (isMatchingReference(reference, exprTmp)) {
                             return result;
                         }
-                    }
-                    // use type and expression
-                    // {
-                    //     let curType;
-                    //     // ?. would add undefined type. How to deal with it?
-                    //     curType = getTypeOfExpression(expression);
-
-                    //     if (curType === type) {
-                    //         return result;
-                    //     }
-
-                    //     while (exprTmp.kind === SyntaxKind.PropertyAccessExpression || exprTmp.kind === SyntaxKind.ElementAccessExpression) {
-                    //         result = result + 1;
-                    //         exprTmp = (<AccessExpression>exprTmp).expression;
-                    //         curType = getTypeOfExpression(exprTmp);
-
-                    //         if (curType === type) {
-                    //             return result;
-                    //         }
-                    //     }
-                    // }
-                    return -1;
-                }
-
-                // If expression is a.b["c"].d, the result would be ["b","c","d"]
-                // NOTE: If element expression is not known in compile progress like a.b[f()].d, the result would be undefined
-                // //NOTE: this function need improvement, ElementAccessExpression argument might could be known in compile time, like "1"+"2", we should check "12" in the path, but how to get the value?
-                // if given depth, the array.length would be the length. --- this property need have pre-knowledge of expression.
-                function getPropertyPathsOfAccessExpression(expressionOri: AccessExpression, depth: number): __String[] | undefined {
-                    const properties = [];
-                    let exprTmp: LeftHandSideExpression = expressionOri;
-                    let propName: __String;
-                    while ((exprTmp.kind === SyntaxKind.PropertyAccessExpression || exprTmp.kind === SyntaxKind.ElementAccessExpression) && properties.length !== depth) {
-                        if (exprTmp.kind === SyntaxKind.PropertyAccessExpression) {
-                            propName = (<PropertyAccessExpression>exprTmp).name.escapedText;
+                        while (isAccessExpression(exprTmp)) {
+                            result = result + 1;
+                            exprTmp = exprTmp.expression;
+                            if (isMatchingReference(reference, exprTmp)) {
+                                return result;
+                            }
                         }
-                        else {
-                            if (isStringLiteralLike((<ElementAccessExpression>exprTmp).argumentExpression)) {
-                                propName = escapeLeadingUnderscores(cast((<ElementAccessExpression>exprTmp).argumentExpression, isLiteralExpression).text);
+                        // use type and expression
+                        // {
+                        //     let curType;
+                        //     // ?. would add undefined type. How to deal with it?
+                        //     curType = getTypeOfExpression(expression);
+
+                        //     if (curType === type) {
+                        //         return result;
+                        //     }
+
+                        //     while (exprTmp.kind === SyntaxKind.PropertyAccessExpression || exprTmp.kind === SyntaxKind.ElementAccessExpression) {
+                        //         result = result + 1;
+                        //         exprTmp = (<AccessExpression>exprTmp).expression;
+                        //         curType = getTypeOfExpression(exprTmp);
+
+                        //         if (curType === type) {
+                        //             return result;
+                        //         }
+                        //     }
+                        // }
+                        return -1;
+                    }
+
+                    // If expression is a.b["c"].d, the result would be ["b","c","d"]
+                    // NOTE: If element expression is not known in compile progress like a.b[f()].d, the result would be undefined
+                    // //NOTE: this function need improvement, ElementAccessExpression argument might could be known in compile time, like "1"+"2", we should check "12" in the path, but how to get the value?
+                    // if given depth, the array.length would be the length. --- this property need have pre-knowledge of expression.
+                    function getPropertyPathsOfAccessExpression(expressionOri: AccessExpression, depth: number): __String[] | undefined {
+                        const properties = [];
+                        let exprTmp: LeftHandSideExpression = expressionOri;
+                        let propName: __String;
+                        while ((exprTmp.kind === SyntaxKind.PropertyAccessExpression || exprTmp.kind === SyntaxKind.ElementAccessExpression) && properties.length !== depth) {
+                            if (exprTmp.kind === SyntaxKind.PropertyAccessExpression) {
+                                propName = (<PropertyAccessExpression>exprTmp).name.escapedText;
                             }
                             else {
-                                return undefined;
+                                if (isStringLiteralLike((<ElementAccessExpression>exprTmp).argumentExpression)) {
+                                    propName = escapeLeadingUnderscores(cast((<ElementAccessExpression>exprTmp).argumentExpression, isLiteralExpression).text);
+                                }
+                                else {
+                                    return undefined;
+                                }
                             }
+                            properties.unshift(propName);
+                            exprTmp = (<PropertyAccessExpression>exprTmp).expression;
                         }
-                        properties.unshift(propName);
-                        exprTmp = (<PropertyAccessExpression>exprTmp).expression;
+                        return properties;
                     }
-                    return properties;
+
+                    const depth = getTypeDepthIfMatch(expressionOri, undefined);
+                    if (depth < 0) {
+                        return undefined;
+                    }
+                    const propertyPaths = getPropertyPathsOfAccessExpression(<AccessExpression>expressionOri, depth);
+                    return propertyPaths;
                 }
+
 
                 // path is whether last might be considered, such as:
                 // someKey: boolean|{a:number}, path is root.someKey or root.someKey.a is different.
@@ -21094,10 +21173,11 @@ namespace ts {
                     for (let i = 0; i < pathsLength; i++) {
                         const path = paths[i];
                         const nonNullableTypeIfStrict = getNonNullableTypeIfNeeded(curType);
-                        const type = getTypeOfPropertyOfType(nonNullableTypeIfStrict, path);
+                        const type = getTypeOfPropertyOrIndexSignature(nonNullableTypeIfStrict, path);
 
                         // if it is not accessable to all types, break;
-                        if (!type) {
+                        // <==> !type, if use getTypeOfProperty
+                        if (type === unknownType) {
                             break;
                         }
 
@@ -21161,14 +21241,10 @@ namespace ts {
                     console.log("Error1\n");
                     return undefined;
                 }
-                const depth = getTypeDepthIfMatch(nonCallExpressionWithOutKeyword, type);
-                if (depth < 0) {
-                    return undefined;
-                }
-                const propertyPaths = getPropertyPathsOfAccessExpression(<AccessExpression>nonCallExpressionWithOutKeyword, depth);
+                const propertyPaths = tryGetPropertyPathsOfReferenceFromAccessExpression(<AccessExpression>nonCallExpressionWithOutKeyword, reference);
                 if (!propertyPaths) {
                     // Not expected here should return. But for the situation not considered, I add this.
-                    console.log("Error2\n");
+                    // console.log("Error2\n");
                     return undefined;
                 }
                 const propertyTypeArray = type.types.map(type => getPropertyTypeFromReferenceAccordingToPath(type, propertyPaths, callExpressionFlag));
@@ -29670,12 +29746,12 @@ namespace ts {
             }
             // If a type has been cached for the node, return it.
             // Note: this is not only cache, without this, some test case would always runs, such as binaryArithmeticControlFlowGraphNotTooLarge.
-            if (node.flags & NodeFlags.TypeCached && flowTypeCache) {
-                const cachedType = flowTypeCache[getNodeId(node)];
-                if (cachedType) {
-                    return cachedType;
-                }
-            }
+            // if (node.flags & NodeFlags.TypeCached && flowTypeCache) {
+            //     const cachedType = flowTypeCache[getNodeId(node)];
+            //     if (cachedType) {
+            //         return cachedType;
+            //     }
+            // }
             const startInvocationCount = flowInvocationCount;
             const type = checkExpression(node);
             // If control flow analysis was required to determine the type, it is worth caching.
