@@ -20795,15 +20795,15 @@ namespace ts {
                 return isMatchingReference(reference, expr.expression) && isDiscriminantProperty(type, name);
             }
 
-
-
             function isMatchingReferenceDiscriminantNew(expr: Expression, computedType: Type) {
-
+                const nullableFlags = TypeFlags.Nullable;   // here should be like getPropertyOfType, and the Property is undefiend.
                 // main part is copied from function createUnionOrIntersectionProperty
                 function judgeWhetherDiscriminantFromSymbolArray(types: Type[]) {
                     let checkFlags = 0;
                     let firstType: Type | undefined;
                     for (const type of types) {
+                        if (type.flags & nullableFlags)
+                        continue;
                         if (!firstType) {
                             firstType = type;
                         }
@@ -20833,16 +20833,19 @@ namespace ts {
             }
 
             function narrowTypeByDiscriminantNew(type: Type, access: AccessExpression, narrowTypeCb: (t: Type) => Type): Type {
+                if (!(type.flags & TypeFlags.Union)) {
+                    return type;
+                }
                 const propertyTypeArray = narrowUnionTypeWithPropertyPathAndExpression(<UnionType>type, access);
                 if (!propertyTypeArray) {
                     return type;
                 }
                 const tmp: Type[] = [];
-                propertyTypeArray.forEach(type => {
-                    if (type.flags & TypeFlags.Union) {
-                        (type as UnionType).types.forEach(t => tmp.push(t));
+                propertyTypeArray.forEach(propType => {
+                    if (propType.flags & TypeFlags.Union) {
+                        (propType as UnionType).types.forEach(t => tmp.push(t));
                     }
-                    else tmp.push(type);
+                    else tmp.push(propType);
                 });
                 const bigUnion = getUnionType(tmp);
                 const narrowedPropType = narrowTypeCb(bigUnion);
