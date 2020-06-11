@@ -21176,7 +21176,16 @@ namespace ts {
                     for (let i = 0; i < pathsLength; i++) {
                         const path = paths[i];
                         const nonNullableTypeIfStrict = getNonNullableTypeIfNeeded(curType);
-                        const type = getTypeOfPropertyOrIndexSignature(nonNullableTypeIfStrict, path);
+                        let type: Type;
+                        if(nonNullableTypeIfStrict.flags & TypeFlags.Intersection){
+                            // although getTypeOfPropertyOfType use getPropertyOfUnionOrIntersectionType, but getReducedApparentType would
+                            // make the intersection type containing mutually exclusive discriminant properties return never.
+                            const prop = getPropertyOfUnionOrIntersectionType(<UnionOrIntersectionType>nonNullableTypeIfStrict, path);
+                            type = prop ? getTypeOfSymbol(prop) : unknownType; // unknownType is to keep coninstance with the return value of getTypeOfPropertyOrIndexSignature
+                        }
+                        else{
+                            type = getTypeOfPropertyOrIndexSignature(nonNullableTypeIfStrict, path);
+                        }
 
                         // if it is not accessable to all types, break;
                         // <==> !type, if use getTypeOfProperty
