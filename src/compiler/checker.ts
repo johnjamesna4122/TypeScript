@@ -20796,13 +20796,12 @@ namespace ts {
             }
 
             function isMatchingReferenceDiscriminantNew(expr: Expression, computedType: Type) {
-                const nullableFlags = TypeFlags.Nullable;   // here should be like getPropertyOfType, and the Property is undefiend.
                 // main part is copied from function createUnionOrIntersectionProperty
-                function judgeWhetherDiscriminantFromSymbolArray(types: Type[]) {
+                function judgeWhetherDiscriminantFromSymbolArray(types: Type[], nullableFlag = false) {
                     let checkFlags = 0;
                     let firstType: Type | undefined;
                     for (const type of types) {
-                        if (type.flags & nullableFlags)
+                        if (nullableFlag && (type.flags & TypeFlags.Nullable))
                         continue;
                         if (!firstType) {
                             firstType = type;
@@ -20821,6 +20820,7 @@ namespace ts {
                 }
 
                 const type = declaredType.flags & TypeFlags.Union ? declaredType : computedType;
+
                 if (!(type.flags & TypeFlags.Union) || !isAccessExpression(expr)) {
                     return false;
                 }
@@ -20828,8 +20828,16 @@ namespace ts {
                 if (!propertyTypeArray) {
                     return false;
                 }
-                const checkFlag = judgeWhetherDiscriminantFromSymbolArray(propertyTypeArray);
-                return (checkFlag & CheckFlags.Discriminant) === CheckFlags.Discriminant;
+                // if root has undefiend|null, this need deal with differently.
+                let isRootHasUndefinedOrNull = false;
+                (<UnionType>type).types.forEach(t => {
+                    if (t.flags & TypeFlags.Nullable) {
+                        isRootHasUndefinedOrNull = true;
+                    }
+                });
+
+                const checkFlag = judgeWhetherDiscriminantFromSymbolArray(propertyTypeArray, isRootHasUndefinedOrNull);
+                return (checkFlag & CheckFlags.Discriminant) === CheckFlags.Discriminant && !maybeTypeOfKind(getUnionType(propertyTypeArray), TypeFlags.Instantiable);;
             }
 
             function narrowTypeByDiscriminantNew(type: Type, access: AccessExpression, narrowTypeCb: (t: Type) => Type): Type {
