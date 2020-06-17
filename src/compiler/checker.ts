@@ -20820,6 +20820,25 @@ namespace ts {
                     return checkFlags;
                 }
 
+                // Note: this line would introduce some issue, like #39910, but I think it is tolerant.
+                /**
+                 * I add this to deal with condition like follows, but it also bring some other benifit, like no need to handle 'this' type.
+                 *   function ffff1() {
+                 *       const a = [1];
+                 *       if (a[2] !== undefined) {
+                 *           a[1];
+                 *       } else {
+                 *           a[2];  // with this code, this would be never.
+                 *       }
+                 *   }
+                 */
+                if (!(declaredType.flags & TypeFlags.Union)) {
+                    return false;
+                }
+                //only union is not enough, the types expect primitive should have more than one.
+                if ((<UnionType>declaredType).types.filter(t => !(t.flags & TypeFlags.Primitive)).length < 2) {
+                    return false;
+                }
 
                 // why it is not "const type = declaredType.flags & TypeFlags.Union ? declaredType : computedType"
                 // when nested, in the inner part, we should use narrowed type, otherwise narrowUnionTypeWithPropertyPathAndExpression might return undefined.
