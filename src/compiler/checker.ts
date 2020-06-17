@@ -20638,8 +20638,8 @@ namespace ts {
                         //         t => !(t.flags & TypeFlags.Never || t.flags & TypeFlags.StringLiteral && (<StringLiteralType>t).value === "undefined"));
                         // }
                     }
-                    if (isMatchingReferenceDiscriminant(expr, type)) {
-                        type = narrowTypeByDiscriminant(type, expr as AccessExpression,
+                    if (isMatchingReferenceDiscriminantNew(expr, type)) {
+                        type = narrowTypeByDiscriminantNew(type, expr as AccessExpression,
                             t => narrowTypeBySwitchOnDiscriminant(t, flow.switchStatement, flow.clauseStart, flow.clauseEnd));
                     }
                 }
@@ -20841,10 +20841,7 @@ namespace ts {
             }
 
             function narrowTypeByDiscriminantNew(type: Type, access: AccessExpression, narrowTypeCb: (t: Type) => Type): Type {
-                if (!(type.flags & TypeFlags.Union)) {
-                    return type;
-                }
-                const propertyTypeArray = narrowUnionTypeWithPropertyPathAndExpression(<UnionType>type, access);
+                const propertyTypeArray = narrowUnionTypeWithPropertyPathAndExpression(type, access);
                 if (!propertyTypeArray) {
                     return type;
                 }
@@ -20863,9 +20860,18 @@ namespace ts {
                     }
                     else return false;
                 });
-                const result = (<UnionType>type).types.filter((_t, index) => {
-                    return tmp2[index];
-                });
+                let result: Type[] = [];
+                if (type.flags & TypeFlags.Union) {
+                    result = (<UnionType>type).types.filter((_t, index) => {
+                        return tmp2[index];
+                    });
+                }
+                else {
+                    if (tmp2[0])
+                        result = [type];
+                    else
+                        result = [narrowedPropType]; //should be equal to never
+                }
                 return getUnionType(result);
             }
 
@@ -21065,7 +21071,7 @@ namespace ts {
             /**
              * @param optionalChainSlice If this is true, only match the part before first optional chain. if expression is a.b.c?.d.e, only take a.b.c to narrow.
              */
-            function narrowUnionTypeWithPropertyPathAndExpression(type: UnionType, expressionWithOutKeyword: Expression, optionalChainSlice = false): Type[] | undefined {
+            function narrowUnionTypeWithPropertyPathAndExpression(type: Type, expressionWithOutKeyword: Expression, optionalChainSlice = false): Type[] | undefined {
                 // first, judge whether path is accessable to all type.
                 // second, use expression to filter correct types
                 // third, return filtered types.
@@ -21267,7 +21273,15 @@ namespace ts {
                     // console.log("Error2\n");
                     return undefined;
                 }
-                const propertyTypeArray = type.types.map(type => getPropertyTypeFromReferenceAccordingToPath(type, propertyPaths, callExpressionFlag));
+
+                let propertyTypeArray: (Type | undefined)[] = [];
+                if (type.flags & TypeFlags.Union) {
+                    propertyTypeArray = (<UnionType>type).types.map(type => getPropertyTypeFromReferenceAccordingToPath(type, propertyPaths, callExpressionFlag));
+                }
+                else {
+                    propertyTypeArray = [getPropertyTypeFromReferenceAccordingToPath(type, propertyPaths, callExpressionFlag)];
+                }
+
                 // if propertyTypeArray has unedfined value, it means sometype in the union type could not reach the path.
                 // This should be an error which is not handled by this function, and we just not continue filter tyopes.
                 if (propertyTypeArray.some(type => !type)) {
@@ -29766,12 +29780,12 @@ namespace ts {
             }
             // If a type has been cached for the node, return it.
             // Note: this is not only cache, without this, some test case would always runs, such as binaryArithmeticControlFlowGraphNotTooLarge.
-            if (node.flags & NodeFlags.TypeCached && flowTypeCache) {
-                const cachedType = flowTypeCache[getNodeId(node)];
-                if (cachedType) {
-                    return cachedType;
-                }
-            }
+            // if (node.flags & NodeFlags.TypeCached && flowTypeCache) {
+            //     const cachedType = flowTypeCache[getNodeId(node)];
+            //     if (cachedType) {
+            //         return cachedType;
+            //     }
+            // }
             const startInvocationCount = flowInvocationCount;
             const type = checkExpression(node);
             // If control flow analysis was required to determine the type, it is worth caching.
