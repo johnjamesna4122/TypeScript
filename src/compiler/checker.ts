@@ -20870,16 +20870,16 @@ namespace ts {
                 if (!propertyTypeArray) {
                     return type;
                 }
-                const tmp: Type[] = [];
+                const subtypes: Type[] = [];
                 propertyTypeArray.forEach(propType => {
                     if (propType.flags & TypeFlags.Union) {
-                        (propType as UnionType).types.forEach(t => tmp.push(t));
+                        (propType as UnionType).types.forEach(t => subtypes.push(t));
                     }
-                    else tmp.push(propType);
+                    else subtypes.push(propType);
                 });
-                const bigUnion = getUnionType(tmp);
+                const bigUnion = getUnionType(subtypes);
                 const narrowedPropType = narrowTypeCb(bigUnion);
-                const tmp2 = propertyTypeArray.map(propertyType => {
+                const markArray = propertyTypeArray.map(propertyType => {
                     if (isTypeComparableTo(propertyType, narrowedPropType)) {
                         return true;
                     }
@@ -20888,11 +20888,11 @@ namespace ts {
                 let result: Type[] = [];
                 if (type.flags & TypeFlags.Union) {
                     result = (<UnionType>type).types.filter((_t, index) => {
-                        return tmp2[index];
+                        return markArray[index];
                     });
                 }
                 else {
-                    if (tmp2[0]) {
+                    if (markArray[0]) {
                         result = [type];
                     }
                     else {
@@ -21075,12 +21075,11 @@ namespace ts {
 
             // return true only when it is a access expression and has ?.
             function isAccessExpressionContainOptionalChain(e: UnaryExpression) {
-                let tmp: UnaryExpression = e;
-                while (isAccessExpression(tmp)) {
-                    if (tmp.flags & NodeFlags.OptionalChain) {
+                while (isAccessExpression(e)) {
+                    if (e.flags & NodeFlags.OptionalChain) {
                         return true;
                     }
-                    tmp = tmp.expression;
+                    e = e.expression;
                 }
                 return false;
             }
@@ -21135,7 +21134,13 @@ namespace ts {
                                 propName = (<PropertyAccessExpression>exprTmp).name.escapedText;
                             }
                             else {
-                                propName = escapeLeadingUnderscores(cast((<ElementAccessExpression>exprTmp).argumentExpression, isLiteralExpression).text);
+                                const argExpression = (<ElementAccessExpression>exprTmp).argumentExpression;
+                                if (isLiteralExpression(argExpression)) {
+                                    propName = escapeLeadingUnderscores(argExpression.text);
+                                }
+                                else {
+                                    return undefined;
+                                }
                             }
                             properties.unshift(propName);
                             exprTmp = (<PropertyAccessExpression>exprTmp).expression;
@@ -21218,10 +21223,10 @@ namespace ts {
                             return;
                         }
                         if (result.flags & TypeFlags.Object) {
-                            const tmp = (<ObjectType>result).callSignatures?.map(getReturnTypeOfSignature);
+                            const returnTypes = (<ObjectType>result).callSignatures?.map(getReturnTypeOfSignature);
                             // In which condition could tmp be undefined?
-                            if (tmp) {
-                                result = getUnionType(tmp);
+                            if (returnTypes) {
+                                result = getUnionType(returnTypes);
                             }
                             // if(isFunctionObjectType)
                         }
@@ -21326,7 +21331,7 @@ namespace ts {
                         if (!propertyTypeArray) {
                             return type;
                         }
-                        const tmp2 = propertyTypeArray.map(propertyType => {
+                        const markArray = propertyTypeArray.map(propertyType => {
                             const propertyTypeFacts = getTypeFacts(propertyType);
                             if (notNullOrUndefinedFilter) {
                                 facts |= TypeFacts.NEUndefined | TypeFacts.NENull;
@@ -21339,7 +21344,7 @@ namespace ts {
                             }
                         });
                         const result = (<UnionType>type).types.filter((_t, index) => {
-                            return tmp2[index];
+                            return markArray[index];
                         });
                         return getUnionType(result);
                     }
@@ -21532,7 +21537,7 @@ namespace ts {
                 if (!propertyTypeArray) {
                     return type;                    // return type;
                 }
-                const tmp2 = propertyTypeArray.map(propertyType => {
+                const markArray = propertyTypeArray.map(propertyType => {
                     const propertyTypeFacts = getTypeFacts(propertyType);
                     let secondFacts: TypeFacts;
                     if (notNullOrUndefinedFilter) {
@@ -21549,7 +21554,7 @@ namespace ts {
                     }
                 });
                 const result = (<UnionType>type).types.filter((_t, index) => {
-                    return tmp2[index];
+                    return markArray[index];
                 });
                 return getUnionType(result);
             }
