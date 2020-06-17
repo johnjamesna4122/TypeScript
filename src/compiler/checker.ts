@@ -20819,7 +20819,7 @@ namespace ts {
                     return checkFlags;
                 }
 
-                const type = declaredType.flags & TypeFlags.Union ? declaredType : computedType;
+                const type = /*declaredType.flags & TypeFlags.Union ? declaredType :*/ computedType;
 
                 if (!(type.flags & TypeFlags.Union) || !isAccessExpression(expr)) {
                     return false;
@@ -21133,12 +21133,7 @@ namespace ts {
                                 propName = (<PropertyAccessExpression>exprTmp).name.escapedText;
                             }
                             else {
-                                if (isStringLiteralLike((<ElementAccessExpression>exprTmp).argumentExpression)) {
-                                    propName = escapeLeadingUnderscores(cast((<ElementAccessExpression>exprTmp).argumentExpression, isLiteralExpression).text);
-                                }
-                                else {
-                                    return undefined;
-                                }
+                                propName = escapeLeadingUnderscores(cast((<ElementAccessExpression>exprTmp).argumentExpression, isLiteralExpression).text);
                             }
                             properties.unshift(propName);
                             exprTmp = (<PropertyAccessExpression>exprTmp).expression;
