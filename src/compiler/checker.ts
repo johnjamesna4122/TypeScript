@@ -20821,11 +20821,11 @@ namespace ts {
                 }
 
 
-                // why it is not  const type = declaredType.flags & TypeFlags.Union ? declaredType : computedType
+                // why it is not "const type = declaredType.flags & TypeFlags.Union ? declaredType : computedType"
                 // when nested, in the inner part, we should use narrowed type, otherwise narrowUnionTypeWithPropertyPathAndExpression might return undefined.
                 const type = computedType;
 
-                // why it is not !(type.flags & TypeFlags.Union) || !isAccessExpression(expr)
+                // why it is not "!(type.flags & TypeFlags.Union) || !isAccessExpression(expr)"
                 /**
                  *  // omit the defination, which is easy to be infered through code and intention..
                  *  function foo(x: A | B): any {
