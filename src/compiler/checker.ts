@@ -20801,8 +20801,9 @@ namespace ts {
                     let checkFlags = 0;
                     let firstType: Type | undefined;
                     for (const type of types) {
-                        if (nullableFlag && (type.flags & TypeFlags.Nullable))
-                        continue;
+                        if (nullableFlag && (type.flags & TypeFlags.Nullable)){
+                            continue;
+                        }
                         if (!firstType) {
                             firstType = type;
                         }
@@ -20819,15 +20820,39 @@ namespace ts {
                     return checkFlags;
                 }
 
-                const type = declaredType.flags & TypeFlags.Union ? declaredType : computedType;
 
-                if (!(type.flags & TypeFlags.Union) || !isAccessExpression(expr)) {
+                // why it is not  const type = declaredType.flags & TypeFlags.Union ? declaredType : computedType
+                // when nested, in the inner part, we should use narrowed type, otherwise narrowUnionTypeWithPropertyPathAndExpression might return undefined.
+                const type = computedType;
+
+                // why it is not !(type.flags & TypeFlags.Union) || !isAccessExpression(expr)
+                /**
+                 *  // omit the defination, which is easy to be infered through code and intention..
+                 *  function foo(x: A | B): any {
+                 *       x;  // A | B
+                 *       if ( 'A' === x.type ) {
+                 *           return x;  // A
+                 *       }
+                 *       x;  // B
+                 *       if ('B' === x.type) {  // trigger this in the last x!
+                 *           return x;  // B
+                 *       }
+                 *       x;  // never // In the second time check, the type would only have one(not Union), but here should be checked to narrow it from 1 to 0
+                 *   }
+                 */
+                if (!isAccessExpression(expr)) {
                     return false;
                 }
                 const propertyTypeArray = narrowUnionTypeWithPropertyPathAndExpression(<UnionType>type, expr);
                 if (!propertyTypeArray) {
                     return false;
                 }
+
+                // The reason is just above.
+                if(!(type.flags & TypeFlags.Union)){
+                    return true;
+                }
+
                 // if root has undefiend|null, this need deal with differently.
                 let isRootHasUndefinedOrNull = false;
                 (<UnionType>type).types.forEach(t => {
@@ -20867,10 +20892,12 @@ namespace ts {
                     });
                 }
                 else {
-                    if (tmp2[0])
+                    if (tmp2[0]) {
                         result = [type];
-                    else
+                    }
+                    else {
                         result = [narrowedPropType]; //should be equal to never
+                    }
                 }
                 return getUnionType(result);
             }
@@ -21079,16 +21106,16 @@ namespace ts {
                     // I think type(Type) is better than reference(Node), it might could hanle like tmp1 = a.b, typeof tmp1 === "",
                     // but it meets some conditions, especially when expression contians optional chain. a?.b would add undefined to b and it is not b. maybe we could use isTypeSubtypeOf? would this meet some other strange condition?
                     //
-                    function getTypeDepthIfMatch(expression: Expression, _type?: Type): number {
+                    function getTypeDepthIfMatch(expression: Expression, ref: Node): number {
                         let result = 0;
                         let exprTmp = expression;
-                        if (isMatchingReference(reference, exprTmp)) {
+                        if (isMatchingReference(ref, exprTmp)) {
                             return result;
                         }
                         while (isAccessExpression(exprTmp)) {
                             result = result + 1;
                             exprTmp = exprTmp.expression;
-                            if (isMatchingReference(reference, exprTmp)) {
+                            if (isMatchingReference(ref, exprTmp)) {
                                 return result;
                             }
                         }
@@ -21116,7 +21143,7 @@ namespace ts {
                         return properties;
                     }
 
-                    const depth = getTypeDepthIfMatch(expressionOri, undefined);
+                    const depth = getTypeDepthIfMatch(expressionOri, reference);
                     if (depth < 0) {
                         return undefined;
                     }
