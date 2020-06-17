@@ -20819,7 +20819,7 @@ namespace ts {
                     return checkFlags;
                 }
 
-                const type = /*declaredType.flags & TypeFlags.Union ? declaredType :*/ computedType;
+                const type = declaredType.flags & TypeFlags.Union ? declaredType : computedType;
 
                 if (!(type.flags & TypeFlags.Union) || !isAccessExpression(expr)) {
                     return false;
@@ -21046,9 +21046,7 @@ namespace ts {
                 return type;
             }
 
-            // the expression should be like a.b?.c?.d.e.f or a
-            // a is an access expression.
-            // in which condition a.expression is not access expression if it is not the root?
+            // return true only when it is a access expression and has ?.
             function isAccessExpressionContainOptionalChain(e: UnaryExpression) {
                 let tmp: UnaryExpression = e;
                 while (isAccessExpression(tmp)) {
@@ -21060,9 +21058,6 @@ namespace ts {
                 return false;
             }
 
-
-            // Expression could be TypeOfExpression, discriminate expression could be added further.
-            // For now, user must make sure that type is one on the path of expression.
             // for example, typeof a.b.c.d.e, type could be the type of a or b or ... or e.
             // ATTENTION! in some case, should not narrow type according to the whole path, for example:
             // typeof a.b?.c.d? !== number, === undefined, !==undefined, when we come to a, its type could only be narrowed by a.b and nothing more.
@@ -21097,26 +21092,6 @@ namespace ts {
                                 return result;
                             }
                         }
-                        // use type and expression
-                        // {
-                        //     let curType;
-                        //     // ?. would add undefined type. How to deal with it?
-                        //     curType = getTypeOfExpression(expression);
-
-                        //     if (curType === type) {
-                        //         return result;
-                        //     }
-
-                        //     while (exprTmp.kind === SyntaxKind.PropertyAccessExpression || exprTmp.kind === SyntaxKind.ElementAccessExpression) {
-                        //         result = result + 1;
-                        //         exprTmp = (<AccessExpression>exprTmp).expression;
-                        //         curType = getTypeOfExpression(exprTmp);
-
-                        //         if (curType === type) {
-                        //             return result;
-                        //         }
-                        //     }
-                        // }
                         return -1;
                     }
 
@@ -21202,7 +21177,7 @@ namespace ts {
                             break;
                         }
 
-                        // The last one could always go out. It is what we need, just return it.
+                        // The last one is what we need, just return it.
                         if (i === pathsLength - 1) {
                             result = type;
                             break;
@@ -21255,17 +21230,15 @@ namespace ts {
                 }
 
                 const nonCallExpressionWithOutKeyword = expressionWithOutKeyword;
-                // getTypeOfNode
-                // check some condition, if not meet, it means we could not handle this confition.
+                /* getTypeOfNode */
 
+                // check some condition, if not meet, it means we could not handle this confition for now.
                 if ((nonCallExpressionWithOutKeyword.kind !== SyntaxKind.Identifier && !isAccessExpression(nonCallExpressionWithOutKeyword))) {// || (<AccessExpression>expressionWithOutKeyword).expression.kind === SyntaxKind.ThisKeyword) {
-                    console.log("Error1\n");
                     return undefined;
                 }
                 const propertyPaths = tryGetPropertyPathsOfReferenceFromAccessExpression(<AccessExpression>nonCallExpressionWithOutKeyword, reference);
                 if (!propertyPaths) {
                     // Not expected here should return. But for the situation not considered, I add this.
-                    // console.log("Error2\n");
                     return undefined;
                 }
 
