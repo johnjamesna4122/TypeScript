@@ -20821,11 +20821,7 @@ namespace ts {
                     return (checkFlags & CheckFlags.Discriminant) === CheckFlags.Discriminant && !maybeTypeOfKind(getUnionType(types), TypeFlags.Instantiable);;
                 }
 
-                // why it is not "const type = declaredType.flags & TypeFlags.Union ? declaredType : computedType"
-                // when nested, in the inner part, we should use narrowed type, otherwise narrowUnionTypeWithPropertyPathAndExpression might return undefined.
-                const type = computedType;
-
-                // why it is not "!(type.flags & TypeFlags.Union) || !isAccessExpression(expr)"
+                // why it is not "!(computedType.flags & TypeFlags.Union) || !isAccessExpression(expr)"
                 /**
                  *  // omit the defination, which is easy to be infered through code and intention..
                  *  function foo(x: A | B): any {
@@ -20843,13 +20839,13 @@ namespace ts {
                 if (!isAccessExpression(expr)) {
                     return false;
                 }
-                const propertyTypeArray = narrowUnionTypeWithPropertyPathAndExpression(<UnionType>type, expr);
+                const propertyTypeArray = getPropertyTypesFromTypeAccordingToExpression(computedType, expr);
                 if (!propertyTypeArray) {
                     return false;
                 }
 
                 // The reason is just above.
-                if (!(type.flags & TypeFlags.Union)) {
+                if (!(computedType.flags & TypeFlags.Union)) {
                     // But it is not that easy, still need to skip some conditions, like 'this' type.
 
                     // Note: introduce some issue, like #39910, but it is tolerant.
@@ -20877,7 +20873,7 @@ namespace ts {
 
                 // if root has undefiend|null, this need deal with differently.
                 let isRootHasUndefinedOrNull = false;
-                (<UnionType>type).types.forEach(t => {
+                (<UnionType>computedType).types.forEach(t => {
                     if (t.flags & TypeFlags.Nullable) {
                         isRootHasUndefinedOrNull = true;
                     }
@@ -20887,7 +20883,7 @@ namespace ts {
             }
 
             function narrowTypeByDiscriminantNew(type: Type, access: AccessExpression, narrowTypeCb: (t: Type) => Type): Type {
-                const propertyTypeArray = narrowUnionTypeWithPropertyPathAndExpression(type, access);
+                const propertyTypeArray = getPropertyTypesFromTypeAccordingToExpression(type, access);
                 if (!propertyTypeArray) {
                     return type;
                 }
@@ -20916,9 +20912,7 @@ namespace ts {
                     if (markArray[0]) {
                         result = [type];
                     }
-                    else {
-                        result = [narrowedPropType]; //should be equal to never
-                    }
+                    // no need to handle else branch, getUnionType would return never if input is [], which is expected.
                 }
                 return getUnionType(result);
             }
@@ -21105,27 +21099,21 @@ namespace ts {
                 return false;
             }
 
-            // for example, typeof a.b.c.d.e, type could be the type of a or b or ... or e.
-            // ATTENTION! in some case, should not narrow type according to the whole path, for example:
-            // typeof a.b?.c.d? !== number, === undefined, !==undefined, when we come to a, its type could only be narrowed by a.b and nothing more.
+            // For expression a.b.c.d.e, type could be the type of a or b or ... or e.
+            // In some case, should not narrow type according to the whole path, for example:
+            // typeof a.b?.c.d? !== number, === undefined, !==undefined, when we come to a, its type could only be narrowed by a.b.
             // But for typeof a.b?.c.d? === number, when we come to a, it could be narrowed by the full path.
-            // Match reference should be a special case, which is not handled by this function.
+            // Just Match reference should be a special case, which is not handled by this function.
             /**
              * @param optionalChainSlice If this is true, only match the part before first optional chain. if expression is a.b.c?.d.e, only take a.b.c to narrow.
              */
-            function narrowUnionTypeWithPropertyPathAndExpression(type: Type, expressionWithOutKeyword: Expression, optionalChainSlice = false): Type[] | undefined {
-                // first, judge whether path is accessable to all type.
-                // second, use expression to filter correct types
-                // third, return filtered types.
+            function getPropertyTypesFromTypeAccordingToExpression(type: Type, expressionWithOutKeyword: Expression, optionalChainSlice = false): Type[] | undefined {
+                // This function is designed to be used in the first steps in follow steps:
+                // 1. get all properties' type of the origional types according to expression path
+                // 2. use expression to  mark wanted types as 'true'
+                // 3. use the mark to get narrowed type from origional type.
 
                 function tryGetPropertyPathsOfReferenceFromAccessExpression(expressionOri: Expression, _ref?: Node) {
-                    // return one non-negative number if match
-                    // type(Type) a.b.c
-                    // reference(Node) a.b.c
-                    // expression(Node) a.b.c?.d.e
-                    // I think type(Type) is better than reference(Node), it might could hanle like tmp1 = a.b, typeof tmp1 === "",
-                    // but it meets some conditions, especially when expression contians optional chain. a?.b would add undefined to b and it is not b. maybe we could use isTypeSubtypeOf? would this meet some other strange condition?
-                    //
                     function getTypeDepthIfMatch(expression: Expression, ref: Node): number {
                         let result = 0;
                         let expr = expression;
@@ -21145,7 +21133,6 @@ namespace ts {
                     // If expression is a.b["c"].d, the result would be ["b","c","d"]
                     // NOTE: If element expression is not known in compile progress like a.b[f()].d, the result would be undefined
                     // //NOTE: this function need improvement, ElementAccessExpression argument might could be known in compile time, like "1"+"2", we should check "12" in the path, but how to get the value?
-                    // if given depth, the array.length would be the length. --- this property need have pre-knowledge of expression.
                     function getPropertyPathsOfAccessExpression(expressionOri: AccessExpression, depth: number): __String[] | undefined {
                         const properties = [];
                         let expr: LeftHandSideExpression = expressionOri;
@@ -21178,15 +21165,7 @@ namespace ts {
                 }
 
 
-                // path is whether last might be considered, such as:
-                // someKey: boolean|{a:number}, path is root.someKey or root.someKey.a is different.
-                // For now if Union type and Intersction type are in path and not the last one, an error would be thrown.
-                // get one property type from one type. Return meaningful type only when the type could be accessed no ambiguously(no union on path, explicitly string and something else.)
                 function getPropertyTypeFromReferenceAccordingToPath(nonUntionType: Type, paths: __String[], callExpressionFlag: boolean): Type | undefined {
-                    // Union
-                    // Intersection
-
-                    //nonUntionType.symbol.members.get("").valueDeclaration.name   /**this is IdentifierObject, maybe we need checkIdentifier? Or not, for it has been done in the progress to get type? */
                     let result: Type | undefined;
                     const pathsLength = paths.length;
 
@@ -21198,9 +21177,8 @@ namespace ts {
                     // If paths is empty array, it is just the type, if not, just return.
                     if (nonUntionType.flags & TypeFlags.Primitive) {
                         // Why undefined is special:
-                        // the way we narrow type is like mark true/false to type.types, if we use getNonNullableTypeIfNeeded, the number would be uncorrect, and the mark might be wrong.
                         // 1. optional chain
-                        // 2. undefined is one keyword of typeof
+                        // 2. undefined is one keyword of typeof value
                         if (nonUntionType.flags & TypeFlags.Undefined) {   // maybe there should be === rather than &
                             return nonUntionType;
                         }
@@ -21215,8 +21193,8 @@ namespace ts {
                         const nonNullableTypeIfStrict = getNonNullableTypeIfNeeded(curType);
                         let type: Type;
                         if(nonNullableTypeIfStrict.flags & TypeFlags.Intersection){
-                            // although getTypeOfPropertyOfType use getPropertyOfUnionOrIntersectionType, but getReducedApparentType would
-                            // make the intersection type containing mutually exclusive discriminant properties return never.
+                            // although getTypeOfPropertyOfType use getPropertyOfUnionOrIntersectionType, but in getReducedApparentType
+                            // intersection type that contains mutually exclusive discriminant properties returns never.
                             const prop = getPropertyOfUnionOrIntersectionType(<UnionOrIntersectionType>nonNullableTypeIfStrict, path);
                             type = prop ? getTypeOfSymbol(prop) : unknownType; // unknownType is to keep coninstance with the return value of getTypeOfPropertyOrIndexSignature
                         }
@@ -21225,7 +21203,6 @@ namespace ts {
                         }
 
                         // if it is not accessable to all types, break;
-                        // <==> !type, if use getTypeOfProperty
                         if (type === unknownType) {
                             break;
                         }
@@ -21249,7 +21226,6 @@ namespace ts {
                             if (returnTypes) {
                                 result = getUnionType(returnTypes);
                             }
-                            // if(isFunctionObjectType)
                         }
                     }
                     return result;
@@ -21283,7 +21259,6 @@ namespace ts {
                 }
 
                 const nonCallExpressionWithOutKeyword = expressionWithOutKeyword;
-                /* getTypeOfNode */
 
                 // check some condition, if not meet, it means we could not handle this confition for now.
                 if ((nonCallExpressionWithOutKeyword.kind !== SyntaxKind.Identifier && !isAccessExpression(nonCallExpressionWithOutKeyword))) {// || (<AccessExpression>expressionWithOutKeyword).expression.kind === SyntaxKind.ThisKeyword) {
@@ -21338,13 +21313,13 @@ namespace ts {
                             // !== undefined
                             // === ~undefined
                             // use full expression to narrow
-                            propertyTypeArray = narrowUnionTypeWithPropertyPathAndExpression(<UnionType>type, typeOfExpr.expression,/* optionalChainSlice */ false);
+                            propertyTypeArray = getPropertyTypesFromTypeAccordingToExpression(<UnionType>type, typeOfExpr.expression,/* optionalChainSlice */ false);
                             notNullOrUndefinedFilter = true;
                         }
                         else {
                             // !== ~undefined, === undefined
                             // use non-OptionalChain part to narrow
-                            propertyTypeArray = narrowUnionTypeWithPropertyPathAndExpression(<UnionType>type, typeOfExpr.expression,/* optionalChainSlice */ true);
+                            propertyTypeArray = getPropertyTypesFromTypeAccordingToExpression(<UnionType>type, typeOfExpr.expression,/* optionalChainSlice */ true);
                             if (isExpressionContainOptionalChain) {
                                 facts = TypeFacts.None;     // The aim is no filter.
                             }
@@ -21540,13 +21515,13 @@ namespace ts {
                 if (facts & 0b111111 && !(facts & TypeFacts.EQUndefined)) {
                     // === ~undefined and not === undefiend
                     // use full expression to narrow
-                    propertyTypeArray = narrowUnionTypeWithPropertyPathAndExpression(<UnionType>type, expr, /* optionalChainSlice */ false);
+                    propertyTypeArray = getPropertyTypesFromTypeAccordingToExpression(<UnionType>type, expr, /* optionalChainSlice */ false);
                     notNullOrUndefinedFilter = true;
                 }
                 else {
                     // !== ~undefined, === undefined, !==undefined
                     // use non-OptionalChain part to narrow
-                    propertyTypeArray = narrowUnionTypeWithPropertyPathAndExpression(<UnionType>type, expr, /* optionalChainSlice */ true);
+                    propertyTypeArray = getPropertyTypesFromTypeAccordingToExpression(<UnionType>type, expr, /* optionalChainSlice */ true);
                     if (facts & TypeFacts.NEUndefined) {
                         // !== undefined
                         notNullOrUndefinedFilter = true;
@@ -29801,12 +29776,12 @@ namespace ts {
             }
             // If a type has been cached for the node, return it.
             // Note: this is not only cache, without this, some test case would always runs, such as binaryArithmeticControlFlowGraphNotTooLarge.
-            if (node.flags & NodeFlags.TypeCached && flowTypeCache) {
-                const cachedType = flowTypeCache[getNodeId(node)];
-                if (cachedType) {
-                    return cachedType;
-                }
-            }
+            // if (node.flags & NodeFlags.TypeCached && flowTypeCache) {
+            //     const cachedType = flowTypeCache[getNodeId(node)];
+            //     if (cachedType) {
+            //         return cachedType;
+            //     }
+            // }
             const startInvocationCount = flowInvocationCount;
             const type = checkExpression(node);
             // If control flow analysis was required to determine the type, it is worth caching.
