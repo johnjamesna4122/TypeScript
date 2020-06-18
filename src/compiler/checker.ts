@@ -21192,7 +21192,7 @@ namespace ts {
                         const path = paths[i];
                         const nonNullableTypeIfStrict = getNonNullableTypeIfNeeded(curType);
                         let type: Type;
-                        if(nonNullableTypeIfStrict.flags & TypeFlags.Intersection){
+                        if(nonNullableTypeIfStrict.flags & TypeFlags.UnionOrIntersection){
                             // although getTypeOfPropertyOfType use getPropertyOfUnionOrIntersectionType, but in getReducedApparentType
                             // intersection type that contains mutually exclusive discriminant properties returns never.
                             const prop = getPropertyOfUnionOrIntersectionType(<UnionOrIntersectionType>nonNullableTypeIfStrict, path);
