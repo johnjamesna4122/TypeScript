@@ -21110,7 +21110,7 @@ namespace ts {
             function getPropertyTypesFromTypeAccordingToExpression(type: Type, expressionWithOutKeyword: Expression, optionalChainSlice = false): Type[] | undefined {
                 // This function is designed to be used in the first steps in follow steps:
                 // 1. get all properties' type of the origional types according to expression path
-                // 2. use expression to  mark wanted types as 'true'
+                // 2. use expression to mark wanted types as 'true'
                 // 3. use the mark to get narrowed type from origional type.
 
                 function tryGetPropertyPathsOfReferenceFromAccessExpression(expressionOri: Expression, _ref?: Node) {
