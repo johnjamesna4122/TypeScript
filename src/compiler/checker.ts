@@ -20797,7 +20797,7 @@ namespace ts {
 
             function isMatchingReferenceDiscriminantNew(expr: Expression, computedType: Type) {
                 // main part is copied from function createUnionOrIntersectionProperty
-                function judgeWhetherDiscriminantFromSymbolArray(types: Type[], nullableFlag = false) {
+                function isTypeArrayDiscriminant(types: Type[], nullableFlag = false) {
                     let checkFlags = 0;
                     let firstType: Type | undefined;
                     for (const type of types) {
@@ -20817,7 +20817,8 @@ namespace ts {
                             checkFlags |= CheckFlags.HasNeverType;
                         }
                     }
-                    return checkFlags;
+                    // this line is copied from isDiscriminantSymbol
+                    return (checkFlags & CheckFlags.Discriminant) === CheckFlags.Discriminant && !maybeTypeOfKind(getUnionType(types), TypeFlags.Instantiable);;
                 }
 
                 // why it is not "const type = declaredType.flags & TypeFlags.Union ? declaredType : computedType"
@@ -20848,10 +20849,10 @@ namespace ts {
                 }
 
                 // The reason is just above.
-                if(!(type.flags & TypeFlags.Union)){
+                if (!(type.flags & TypeFlags.Union)) {
                     // But it is not that easy, still need to skip some conditions, like 'this' type.
 
-                    // Note: this line would introduce some issue, like #39910, but I think it is tolerant.
+                    // Note: introduce some issue, like #39910, but it is tolerant.
                     /**
                      * I add this to deal with condition like follows, but it also bring some other benifit, like no need to handle 'this' type.
                      *   function ffff1() {
@@ -20882,8 +20883,7 @@ namespace ts {
                     }
                 });
 
-                const checkFlag = judgeWhetherDiscriminantFromSymbolArray(propertyTypeArray, isRootHasUndefinedOrNull);
-                return (checkFlag & CheckFlags.Discriminant) === CheckFlags.Discriminant && !maybeTypeOfKind(getUnionType(propertyTypeArray), TypeFlags.Instantiable);;
+                return isTypeArrayDiscriminant(propertyTypeArray, isRootHasUndefinedOrNull);
             }
 
             function narrowTypeByDiscriminantNew(type: Type, access: AccessExpression, narrowTypeCb: (t: Type) => Type): Type {
@@ -21128,14 +21128,14 @@ namespace ts {
                     //
                     function getTypeDepthIfMatch(expression: Expression, ref: Node): number {
                         let result = 0;
-                        let exprTmp = expression;
-                        if (isMatchingReference(ref, exprTmp)) {
+                        let expr = expression;
+                        if (isMatchingReference(ref, expr)) {
                             return result;
                         }
-                        while (isAccessExpression(exprTmp)) {
+                        while (isAccessExpression(expr)) {
                             result = result + 1;
-                            exprTmp = exprTmp.expression;
-                            if (isMatchingReference(ref, exprTmp)) {
+                            expr = expr.expression;
+                            if (isMatchingReference(ref, expr)) {
                                 return result;
                             }
                         }
@@ -21148,14 +21148,14 @@ namespace ts {
                     // if given depth, the array.length would be the length. --- this property need have pre-knowledge of expression.
                     function getPropertyPathsOfAccessExpression(expressionOri: AccessExpression, depth: number): __String[] | undefined {
                         const properties = [];
-                        let exprTmp: LeftHandSideExpression = expressionOri;
+                        let expr: LeftHandSideExpression = expressionOri;
                         let propName: __String;
-                        while ((exprTmp.kind === SyntaxKind.PropertyAccessExpression || exprTmp.kind === SyntaxKind.ElementAccessExpression) && properties.length !== depth) {
-                            if (exprTmp.kind === SyntaxKind.PropertyAccessExpression) {
-                                propName = (<PropertyAccessExpression>exprTmp).name.escapedText;
+                        while ((expr.kind === SyntaxKind.PropertyAccessExpression || expr.kind === SyntaxKind.ElementAccessExpression) && properties.length !== depth) {
+                            if (expr.kind === SyntaxKind.PropertyAccessExpression) {
+                                propName = (<PropertyAccessExpression>expr).name.escapedText;
                             }
                             else {
-                                const argExpression = (<ElementAccessExpression>exprTmp).argumentExpression;
+                                const argExpression = (<ElementAccessExpression>expr).argumentExpression;
                                 if (isLiteralExpression(argExpression)) {
                                     propName = escapeLeadingUnderscores(argExpression.text);
                                 }
@@ -21164,7 +21164,7 @@ namespace ts {
                                 }
                             }
                             properties.unshift(propName);
-                            exprTmp = (<PropertyAccessExpression>exprTmp).expression;
+                            expr = (<PropertyAccessExpression>expr).expression;
                         }
                         return properties;
                     }
@@ -21245,7 +21245,7 @@ namespace ts {
                         }
                         if (result.flags & TypeFlags.Object) {
                             const returnTypes = (<ObjectType>result).callSignatures?.map(getReturnTypeOfSignature);
-                            // In which condition could tmp be undefined?
+                            // In which condition could returnTypes be undefined?
                             if (returnTypes) {
                                 result = getUnionType(returnTypes);
                             }
@@ -21255,15 +21255,15 @@ namespace ts {
                     return result;
                 }
 
-                function tmpExpressionWithOutOptionalChain(e: Expression) {
+                function getExpressionWithOutOptionalChain(e: Expression) {
                     let i = 0;
                     let delta = 0;
-                    let tmp1 = e;
-                    while (isAccessExpression(tmp1)) {
+                    let expr = e;
+                    while (isAccessExpression(expr)) {
                         i = i + 1;
                         delta += 1;
-                        if (tmp1.flags & NodeFlags.OptionalChain) { delta = 0; }
-                        tmp1 = tmp1.expression;
+                        if (expr.flags & NodeFlags.OptionalChain) { delta = 0; }
+                        expr = expr.expression;
                     }
                     i = i - delta;
                     for (let j = 0; j < i; j++) {
@@ -21273,7 +21273,7 @@ namespace ts {
                 }
 
                 if (optionalChainSlice) {
-                    expressionWithOutKeyword = tmpExpressionWithOutOptionalChain(expressionWithOutKeyword);
+                    expressionWithOutKeyword = getExpressionWithOutOptionalChain(expressionWithOutKeyword);
                 }
 
                 let callExpressionFlag = false;
@@ -21523,9 +21523,9 @@ namespace ts {
                   we use the type facts to narrow the implied type to boolean. We know that number cannot be selected
                   because it is caught in the first clause.
                 */
-                const tmpExpression = (<TypeOfExpression>switchStatement.expression).expression;
+                const expr = (<TypeOfExpression>switchStatement.expression).expression;
                 const impliedType = getTypeWithFacts(getUnionType(clauseWitnesses.map(text => getImpliedTypeFromTypeofGuard(type, text) || type)), switchFacts);
-                if (isMatchingReference(reference, tmpExpression)) {
+                if (isMatchingReference(reference, expr)) {
                     if (hasDefaultClause) {
                         return filterType(type, t => (getTypeFacts(t) & switchFacts) === switchFacts);
                     }
@@ -21533,20 +21533,20 @@ namespace ts {
                 }
                 let propertyTypeArray: Type[] | undefined;
                 let notNullOrUndefinedFilter = false;
-                const isExpressionContainOptionalChain = isAccessExpressionContainOptionalChain(tmpExpression);
+                const isExpressionContainOptionalChain = isAccessExpressionContainOptionalChain(expr);
                 let facts = switchFacts;
 
                 // ~undefined means other values except undefiend. boolean, bigint....
                 if (facts & 0b111111 && !(facts & TypeFacts.EQUndefined)) {
                     // === ~undefined and not === undefiend
                     // use full expression to narrow
-                    propertyTypeArray = narrowUnionTypeWithPropertyPathAndExpression(<UnionType>type, tmpExpression, /* optionalChainSlice */ false);
+                    propertyTypeArray = narrowUnionTypeWithPropertyPathAndExpression(<UnionType>type, expr, /* optionalChainSlice */ false);
                     notNullOrUndefinedFilter = true;
                 }
                 else {
                     // !== ~undefined, === undefined, !==undefined
                     // use non-OptionalChain part to narrow
-                    propertyTypeArray = narrowUnionTypeWithPropertyPathAndExpression(<UnionType>type, tmpExpression, /* optionalChainSlice */ true);
+                    propertyTypeArray = narrowUnionTypeWithPropertyPathAndExpression(<UnionType>type, expr, /* optionalChainSlice */ true);
                     if (facts & TypeFacts.NEUndefined) {
                         // !== undefined
                         notNullOrUndefinedFilter = true;
