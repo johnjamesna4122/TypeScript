@@ -29776,12 +29776,12 @@ namespace ts {
             }
             // If a type has been cached for the node, return it.
             // Note: this is not only cache, without this, some test case would always runs, such as binaryArithmeticControlFlowGraphNotTooLarge.
-            // if (node.flags & NodeFlags.TypeCached && flowTypeCache) {
-            //     const cachedType = flowTypeCache[getNodeId(node)];
-            //     if (cachedType) {
-            //         return cachedType;
-            //     }
-            // }
+            if (node.flags & NodeFlags.TypeCached && flowTypeCache) {
+                const cachedType = flowTypeCache[getNodeId(node)];
+                if (cachedType) {
+                    return cachedType;
+                }
+            }
             const startInvocationCount = flowInvocationCount;
             const type = checkExpression(node);
             // If control flow analysis was required to determine the type, it is worth caching.
