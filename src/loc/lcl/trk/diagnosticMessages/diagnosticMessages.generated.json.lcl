@@ -2936,20 +2936,20 @@
         </Str>
         <Disp Icon="Str" />
       </Item>
-      <Item ItemId=";Catch_clause_variable_cannot_have_a_type_annotation_1196" ItemType="0" PsrId="306" Leaf="true">
-        <Str Cat="Text">
-          <Val><![CDATA[Catch clause variable cannot have a type annotation.]]></Val>
-          <Tgt Cat="Text" Stat="Loc" Orig="New">
-            <Val><![CDATA[Catch yan tümcesi değişkeni bir tür ek açıklamasına sahip olamaz.]]></Val>
-          </Tgt>
-        </Str>
-        <Disp Icon="Str" />
-      </Item>
       <Item ItemId=";Catch_clause_variable_cannot_have_an_initializer_1197" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Catch clause variable cannot have an initializer.]]></Val>
           <Tgt Cat="Text" Stat="Loc" Orig="New">
             <Val><![CDATA[Catch yan tümcesi değişkeni bir başlatıcıya sahip olamaz.]]></Val>
+          </Tgt>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
+      <Item ItemId=";Catch_clause_variable_type_annotation_must_be_any_or_unknown_if_specified_1196" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[Catch clause variable type annotation must be 'any' or 'unknown' if specified.]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Belirtilmişse catch yan tümcesi değişken türü ek açıklaması 'any ' veya 'unknown' olmalıdır.]]></Val>
           </Tgt>
         </Str>
         <Disp Icon="Str" />
@@ -3452,6 +3452,15 @@
         </Str>
         <Disp Icon="Str" />
       </Item>
+      <Item ItemId=";Convert_arrow_function_or_function_expression_95122" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[Convert arrow function or function expression]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Ok işlevini veya işlev ifadesini dönüştür]]></Val>
+          </Tgt>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
       <Item ItemId=";Convert_const_to_let_95093" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Convert 'const' to 'let']]></Val>
@@ -3587,6 +3596,24 @@
         </Str>
         <Disp Icon="Str" />
       </Item>
+      <Item ItemId=";Convert_to_anonymous_function_95123" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[Convert to anonymous function]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Anonim işleve dönüştür]]></Val>
+          </Tgt>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
+      <Item ItemId=";Convert_to_arrow_function_95125" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[Convert to arrow function]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Ok işlevine dönüştür]]></Val>
+          </Tgt>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
       <Item ItemId=";Convert_to_async_function_95065" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Convert to async function]]></Val>
@@ -3601,6 +3628,15 @@
           <Val><![CDATA[Convert to default import]]></Val>
           <Tgt Cat="Text" Stat="Loc" Orig="New">
             <Val><![CDATA[Varsayılan içeri aktarmaya dönüştür]]></Val>
+          </Tgt>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
+      <Item ItemId=";Convert_to_named_function_95124" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[Convert to named function]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Adlandırılmış işleve dönüştür]]></Val>
           </Tgt>
         </Str>
         <Disp Icon="Str" />
@@ -5365,6 +5401,15 @@
           <Val><![CDATA[Generate 'get' and 'set' accessors]]></Val>
           <Tgt Cat="Text" Stat="Loc" Orig="New">
             <Val><![CDATA['get' ve 'set' erişimcilerini oluşturun]]></Val>
+          </Tgt>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
+      <Item ItemId=";Generate_get_and_set_accessors_for_all_overriding_properties_95119" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[Generate 'get' and 'set' accessors for all overriding properties]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Tüm geçersiz kılma özellikleri için 'get' ve 'set' erişimcileri oluşturun]]></Val>
           </Tgt>
         </Str>
         <Disp Icon="Str" />
@@ -10073,6 +10118,15 @@
         </Str>
         <Disp Icon="Str" />
       </Item>
+      <Item ItemId=";The_inferred_type_of_0_references_a_type_with_a_cyclic_structure_which_cannot_be_trivially_serialize_5088" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[The inferred type of '{0}' references a type with a cyclic structure which cannot be trivially serialized. A type annotation is necessary.]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Çıkarsanan '{0}' türü, önemsiz olarak seri hale getirilemeyen döngüsel yapıya sahip bir türe başvurur. Tür ek açıklaması gerekir.]]></Val>
+          </Tgt>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
       <Item ItemId=";The_inferred_type_of_0_references_an_inaccessible_1_type_A_type_annotation_is_necessary_2527" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[The inferred type of '{0}' references an inaccessible '{1}' type. A type annotation is necessary.]]></Val>
@@ -11968,6 +12022,24 @@
           <Val><![CDATA[Wrap all object literal with parentheses]]></Val>
           <Tgt Cat="Text" Stat="Loc" Orig="New">
             <Val><![CDATA[Tüm nesne sabit değerini parantez içine alın]]></Val>
+          </Tgt>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
+      <Item ItemId=";Wrap_all_unparented_JSX_in_JSX_fragment_95121" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[Wrap all unparented JSX in JSX fragment]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[JSX parçasındaki tüm ana öğesiz JSX'leri sarmala]]></Val>
+          </Tgt>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
+      <Item ItemId=";Wrap_in_JSX_fragment_95120" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[Wrap in JSX fragment]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[JSX parçasında sarmala]]></Val>
           </Tgt>
         </Str>
         <Disp Icon="Str" />

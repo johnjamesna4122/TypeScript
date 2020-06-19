@@ -2936,20 +2936,20 @@
         </Str>
         <Disp Icon="Str" />
       </Item>
-      <Item ItemId=";Catch_clause_variable_cannot_have_a_type_annotation_1196" ItemType="0" PsrId="306" Leaf="true">
-        <Str Cat="Text">
-          <Val><![CDATA[Catch clause variable cannot have a type annotation.]]></Val>
-          <Tgt Cat="Text" Stat="Loc" Orig="New">
-            <Val><![CDATA[A variável de cláusula catch não pode ter uma anotação de tipo.]]></Val>
-          </Tgt>
-        </Str>
-        <Disp Icon="Str" />
-      </Item>
       <Item ItemId=";Catch_clause_variable_cannot_have_an_initializer_1197" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Catch clause variable cannot have an initializer.]]></Val>
           <Tgt Cat="Text" Stat="Loc" Orig="New">
             <Val><![CDATA[A variável de cláusula catch não pode ter um inicializador.]]></Val>
+          </Tgt>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
+      <Item ItemId=";Catch_clause_variable_type_annotation_must_be_any_or_unknown_if_specified_1196" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[Catch clause variable type annotation must be 'any' or 'unknown' if specified.]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[A anotação de tipo de variável da cláusula catch precisa ser 'any' ou 'unknown' quando especificada.]]></Val>
           </Tgt>
         </Str>
         <Disp Icon="Str" />
@@ -3452,6 +3452,15 @@
         </Str>
         <Disp Icon="Str" />
       </Item>
+      <Item ItemId=";Convert_arrow_function_or_function_expression_95122" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[Convert arrow function or function expression]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Converter a função de seta ou a expressão de função]]></Val>
+          </Tgt>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
       <Item ItemId=";Convert_const_to_let_95093" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Convert 'const' to 'let']]></Val>
@@ -3587,6 +3596,24 @@
         </Str>
         <Disp Icon="Str" />
       </Item>
+      <Item ItemId=";Convert_to_anonymous_function_95123" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[Convert to anonymous function]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Converter em uma função anônima]]></Val>
+          </Tgt>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
+      <Item ItemId=";Convert_to_arrow_function_95125" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[Convert to arrow function]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Converter em uma função de seta]]></Val>
+          </Tgt>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
       <Item ItemId=";Convert_to_async_function_95065" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[Convert to async function]]></Val>
@@ -3601,6 +3628,15 @@
           <Val><![CDATA[Convert to default import]]></Val>
           <Tgt Cat="Text" Stat="Loc" Orig="New">
             <Val><![CDATA[Converter para importação padrão]]></Val>
+          </Tgt>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
+      <Item ItemId=";Convert_to_named_function_95124" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[Convert to named function]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Converter em uma função nomeada]]></Val>
           </Tgt>
         </Str>
         <Disp Icon="Str" />
@@ -10079,6 +10115,15 @@
         </Str>
         <Disp Icon="Str" />
       </Item>
+      <Item ItemId=";The_inferred_type_of_0_references_a_type_with_a_cyclic_structure_which_cannot_be_trivially_serialize_5088" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[The inferred type of '{0}' references a type with a cyclic structure which cannot be trivially serialized. A type annotation is necessary.]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[O tipo inferido '{0}' faz referência a um tipo com uma estrutura cíclica que não pode ser serializada trivialmente. Uma anotação de tipo é necessária.]]></Val>
+          </Tgt>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
       <Item ItemId=";The_inferred_type_of_0_references_an_inaccessible_1_type_A_type_annotation_is_necessary_2527" ItemType="0" PsrId="306" Leaf="true">
         <Str Cat="Text">
           <Val><![CDATA[The inferred type of '{0}' references an inaccessible '{1}' type. A type annotation is necessary.]]></Val>
@@ -11974,6 +12019,24 @@
           <Val><![CDATA[Wrap all object literal with parentheses]]></Val>
           <Tgt Cat="Text" Stat="Loc" Orig="New">
             <Val><![CDATA[Colocar todo o literal de objeto entre parênteses]]></Val>
+          </Tgt>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
+      <Item ItemId=";Wrap_all_unparented_JSX_in_JSX_fragment_95121" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[Wrap all unparented JSX in JSX fragment]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Empacotar todos os JSXs sem pai no fragmento de JSX]]></Val>
+          </Tgt>
+        </Str>
+        <Disp Icon="Str" />
+      </Item>
+      <Item ItemId=";Wrap_in_JSX_fragment_95120" ItemType="0" PsrId="306" Leaf="true">
+        <Str Cat="Text">
+          <Val><![CDATA[Wrap in JSX fragment]]></Val>
+          <Tgt Cat="Text" Stat="Loc" Orig="New">
+            <Val><![CDATA[Encapsular o fragmento de JSX]]></Val>
           </Tgt>
         </Str>
         <Disp Icon="Str" />
