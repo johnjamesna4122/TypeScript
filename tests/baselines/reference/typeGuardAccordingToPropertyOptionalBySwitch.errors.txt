@@ -15,10 +15,9 @@ tests/cases/conformance/expressions/typeGuards/typeGuardAccordingToPropertyOptio
 tests/cases/conformance/expressions/typeGuards/typeGuardAccordingToPropertyOptionalBySwitch.ts(112,13): error TS2532: Object is possibly 'undefined'.
 tests/cases/conformance/expressions/typeGuards/typeGuardAccordingToPropertyOptionalBySwitch.ts(117,13): error TS2532: Object is possibly 'undefined'.
 tests/cases/conformance/expressions/typeGuards/typeGuardAccordingToPropertyOptionalBySwitch.ts(117,13): error TS2532: Object is possibly 'undefined'.
-tests/cases/conformance/expressions/typeGuards/typeGuardAccordingToPropertyOptionalBySwitch.ts(120,13): error TS2532: Object is possibly 'undefined'.
 
 
-==== tests/cases/conformance/expressions/typeGuards/typeGuardAccordingToPropertyOptionalBySwitch.ts (18 errors) ====
+==== tests/cases/conformance/expressions/typeGuards/typeGuardAccordingToPropertyOptionalBySwitch.ts (17 errors) ====
     interface Foo1 {
         key1: {
             key2: number;
@@ -173,8 +172,6 @@ tests/cases/conformance/expressions/typeGuards/typeGuardAccordingToPropertyOptio
                 break;
             default:
                 u.key1.key2;
-                ~~~~~~
-!!! error TS2532: Object is possibly 'undefined'.
                 break;
         }
     }

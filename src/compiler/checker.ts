@@ -21525,8 +21525,7 @@ namespace ts {
                         let notNullOrUndefinedFilter = false;  // the aim of this filter is type has 'undefined',filter it out from result.
                         // ~undefined means other values except undefiend. boolean, bigint....
                         if ((assumeTrue && literal.text !== "undefined") || (!assumeTrue && literal.text === "undefined")) {
-                            // !== undefined
-                            // === ~undefined
+                            // !== undefined, === ~undefined
                             // always use full expression to narrow
                             propertyTypeArray = getPropertyTypesFromTypeAccordingToExpression(<UnionType>type, typeOfExpr.expression,/* optionalChainSlice */ false);
                             notNullOrUndefinedFilter = true;
@@ -21542,7 +21541,7 @@ namespace ts {
                         const markArray = propertyTypeArray.map(propertyType => {
                             const propertyTypeFacts = getTypeFacts(propertyType);
                             if (notNullOrUndefinedFilter) {
-                                facts |= TypeFacts.NEUndefined | TypeFacts.NENull;
+                                facts |= TypeFacts.NEUndefinedOrNull;
                             }
                             if ((propertyTypeFacts & facts) === facts) {
                                 return true;
@@ -21723,8 +21722,7 @@ namespace ts {
                 const isExpressionContainOptionalChain = isAccessExpressionContainOptionalChain(expr);
                 let facts = switchFacts;
 
-                // ~undefined means other values except undefiend. boolean, bigint....
-                if (facts & 0b111111 && !(facts & TypeFacts.EQUndefined)) {
+                if ((facts & 0b111111 && !(facts & TypeFacts.EQUndefined) || (facts & TypeFacts.NEUndefined))) {
                     // not contains 'undefiend'
                     // use full expression to narrow
                     propertyTypeArray = getPropertyTypesFromTypeAccordingToExpression(<UnionType>type, expr, /* optionalChainSlice */ false);
@@ -21732,14 +21730,7 @@ namespace ts {
                 }
                 else {
                     // use non-OptionalChain part to narrow
-                    propertyTypeArray = getPropertyTypesFromTypeAccordingToExpression(<UnionType>type, expr, /* optionalChainSlice */ true);
-                    if (facts & TypeFacts.NEUndefined) {
-                        // !== undefined
-                        notNullOrUndefinedFilter = true;
-                    }
-                    if (isExpressionContainOptionalChain) {
-                        facts = TypeFacts.All;     // The aim is no filter.
-                    }
+                    propertyTypeArray = getPropertyTypesFromTypeAccordingToExpression(<UnionType>type, expr, /* optionalChainSlice */ isExpressionContainOptionalChain);
                 }
                 if (!propertyTypeArray) {
                     return type;                    // return type;
