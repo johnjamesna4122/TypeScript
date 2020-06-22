@@ -19763,22 +19763,17 @@ namespace ts {
             return false;
         }
 
-        function isDiscriminantSymbol(symbol: Symbol | undefined) {
-            if (symbol && getCheckFlags(symbol) & CheckFlags.SyntheticProperty) {
-                if ((<TransientSymbol>symbol).isDiscriminantProperty === undefined) {
-                    (<TransientSymbol>symbol).isDiscriminantProperty =
-                        ((<TransientSymbol>symbol).checkFlags & CheckFlags.Discriminant) === CheckFlags.Discriminant &&
-                        !maybeTypeOfKind(getTypeOfSymbol(symbol), TypeFlags.Instantiable);
-                }
-                return !!(<TransientSymbol>symbol).isDiscriminantProperty;
-            }
-            return false;
-        }
-
         function isDiscriminantProperty(type: Type | undefined, name: __String) {
             if (type && type.flags & TypeFlags.Union) {
                 const prop = getUnionOrIntersectionProperty(<UnionType>type, name);
-                return isDiscriminantSymbol(prop);
+                if (prop && getCheckFlags(prop) & CheckFlags.SyntheticProperty) {
+                    if ((<TransientSymbol>prop).isDiscriminantProperty === undefined) {
+                        (<TransientSymbol>prop).isDiscriminantProperty =
+                            ((<TransientSymbol>prop).checkFlags & CheckFlags.Discriminant) === CheckFlags.Discriminant &&
+                            !maybeTypeOfKind(getTypeOfSymbol(prop), TypeFlags.Instantiable);
+                    }
+                    return !!(<TransientSymbol>prop).isDiscriminantProperty;
+                }
             }
             return false;
         }
@@ -19943,11 +19938,6 @@ namespace ts {
             return TypeFacts.All;
         }
 
-        /**
-         * It might work differently from what you think.
-         * For example, fact1 is "it is number1", fact2 is "it is not number1". Now given a number and facts including both fact1 and fact2,
-         * if you get correct facts from the number, then all numbers meets the condition, for 1 meets facts1, and others meets fact2.
-         */
         function getTypeWithFacts(type: Type, include: TypeFacts) {
             return filterType(type, t => (getTypeFacts(t) & include) !== 0);
         }
@@ -20148,7 +20138,7 @@ namespace ts {
         function isTypeSubsetOf(source: Type, target: Type) {
             return source === target || target.flags & TypeFlags.Union && isTypeSubsetOfUnion(source, <UnionType>target);
         }
-// How to define type A is subset of untion type B: when type A is also a union type, if type t appears in A, it appears in B. if type A is not a untion type,
+
         function isTypeSubsetOfUnion(source: Type, target: UnionType) {
             if (source.flags & TypeFlags.Union) {
                 for (const t of (<UnionType>source).types) {
@@ -20840,7 +20830,7 @@ namespace ts {
                 if (isMatchingReference(reference, expr)) {
                     type = narrowTypeBySwitchOnDiscriminant(type, flow.switchStatement, flow.clauseStart, flow.clauseEnd);
                 }
-                else if (expr.kind === SyntaxKind.TypeOfExpression){// && isMatchingReference(reference, (expr as TypeOfExpression).expression)) {
+                else if (expr.kind === SyntaxKind.TypeOfExpression){
                     type = narrowBySwitchOnTypeOf(type, flow.switchStatement, flow.clauseStart, flow.clauseEnd);
                 }
                 else {
@@ -20849,10 +20839,6 @@ namespace ts {
                             type = narrowTypeBySwitchOptionalChainContainment(type, flow.switchStatement, flow.clauseStart, flow.clauseEnd,
                                 t => !(t.flags & (TypeFlags.Undefined | TypeFlags.Never)));
                         }
-                        // else if (expr.kind === SyntaxKind.TypeOfExpression && optionalChainContainsReference((expr as TypeOfExpression).expression, reference)) {
-                        //     type = narrowTypeBySwitchOptionalChainContainment(type, flow.switchStatement, flow.clauseStart, flow.clauseEnd,
-                        //         t => !(t.flags & TypeFlags.Never || t.flags & TypeFlags.StringLiteral && (<StringLiteralType>t).value === "undefined"));
-                        // }
                     }
                     if (isMatchingReferenceDiscriminantNew(expr, type)) {
                         type = narrowTypeByDiscriminantNew(type, expr as AccessExpression,
@@ -21033,25 +21019,12 @@ namespace ts {
                             checkFlags |= CheckFlags.HasNeverType;
                         }
                     }
-                    // this line is copied from isDiscriminantSymbol
+                    // next line is copied from isDiscriminantProperty
                     return (checkFlags & CheckFlags.Discriminant) === CheckFlags.Discriminant && !maybeTypeOfKind(getUnionType(types), TypeFlags.Instantiable);;
                 }
 
-                // why it is not "!(computedType.flags & TypeFlags.Union) || !isAccessExpression(expr)"
-                /**
-                 *  // omit the defination, which is easy to be infered through code and intention..
-                 *  function foo(x: A | B): any {
-                 *       x;  // A | B
-                 *       if ( 'A' === x.type ) {
-                 *           return x;  // A
-                 *       }
-                 *       x;  // B
-                 *       if ('B' === x.type) {  // trigger this in the last x!
-                 *           return x;  // B
-                 *       }
-                 *       x;  // never // In the second time check, the type would only have one(not Union), but here should be checked to narrow it from 1 to 0
-                 *   }
-                 */
+                // why it is not "!(declaredType.flags & TypeFlags.Union) || !isAccessExpression(expr)"
+                // the reason is below.
                 if (!isAccessExpression(expr)) {
                     return false;
                 }
@@ -21060,30 +21033,53 @@ namespace ts {
                     return false;
                 }
 
-                // The reason is just above.
-                if (!(computedType.flags & TypeFlags.Union)) {
-                    // But it is not that easy, still need to skip some conditions, like 'this' type.
 
-                    // Note: introduce some issue, like #39910, but it is tolerant.
+                if (!(computedType.flags & TypeFlags.Union)) {
+                    // Whether to use declaredType is a big deal, desvering a lot of comments.
+                    // The Key is "How to judge one type could be narrowed"
                     /**
-                     * I add this to deal with condition like follows, but it also bring some other benifit, like no need to handle 'this' type.
+                     * Condition 1: computed type is not union any more.
+                     *  // omit the defination, which is easy to be infered through code and intention
+                     *  function foo(x: A | B): any {
+                     *       x;  // A | B
+                     *       if ( 'A' === x.type ) { // first trigger
+                     *           return x;  // A
+                     *       }
+                     *       x;  // B
+                     *       if ('B' === x.type) {  // second trigger
+                     *           return x;  // B
+                     *       }
+                     *       x;  // In the second time narrowing, the computed type would only have one(not Union), but should still be triggered to narrow type to never.
+                     *   }
+                     */
+                    // use declaredType is a quick way to resolve issue above -- when computed type is not union, the declared type is not chagned.
+                    // But it also bring some other issue, like #39114 and #39110. As long as the declared type is not proper, issues come.
+
+                    // and only declared union is too loose to judge it could be narrowed.
+                    /**
+                     * Condition 2: Index type with undefined/null
                      *   function ffff1() {
-                     *       const a = [1];
-                     *       if (a[2] !== undefined) {
-                     *           a[1];
-                     *       } else {
-                     *           a[2];  // with this code, this would be never.
+                     *       let a: Array<number>|undefined;
+                     *       a = [1];
+                     *       if(a){
+                     *           if (a[2] !== undefined) {
+                     *               a[1];
+                     *           } else {
+                     *               a[2];  // declared type is union, but here should not be narrowed to never.
+                     *           }
                      *       }
                      *   }
                      */
                     if (!(declaredType.flags & TypeFlags.Union)) {
                         return false;
                     }
-                    //only union is not enough, the types expect primitive should have more than one.
+                    //, the types expect primitive should have more than one.
                     if ((<UnionType>declaredType).types.filter(t => !(t.flags & TypeFlags.Primitive)).length < 2) {
                         return false;
                     }
-
+                    // However, I still use declared type, and put it here. The main aim is for future improving.
+                    // We could deal with 'this' type and use ugly code to deal with Condition 2, then we could avoid use declared type at least for now
+                    // passing all tests and issue #39110/#39114, but does it deserve? Is it clearly enough?
                     return true;
                 }
 
