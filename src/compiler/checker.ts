@@ -21720,7 +21720,7 @@ namespace ts {
                 let propertyTypeArray: Type[] | undefined;
                 let notNullOrUndefinedFilter = false;
                 const isExpressionContainOptionalChain = isAccessExpressionContainOptionalChain(expr);
-                let facts = switchFacts;
+                const facts = switchFacts;
 
                 if ((facts & 0b111111 && !(facts & TypeFacts.EQUndefined) || (facts & TypeFacts.NEUndefined))) {
                     // not contains 'undefiend'
