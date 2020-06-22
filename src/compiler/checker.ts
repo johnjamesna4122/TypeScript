@@ -21314,21 +21314,19 @@ namespace ts {
                 return false;
             }
 
-            // For expression a.b.c.d.e, type could be the type of a or b or ... or e.
-            // In some case, should not narrow type according to the whole path, for example:
-            // typeof a.b?.c.d? !== number, === undefined, !==undefined, when we come to a, its type could only be narrowed by a.b.
-            // But for typeof a.b?.c.d? === number, when we come to a, it could be narrowed by the full path.
-            // Just Match reference should be a special case, which is not handled by this function.
             /**
-             * @param optionalChainSlice If this is true, only match the part before first optional chain. if expression is a.b.c?.d.e, only take a.b.c to narrow.
+             * @param optionalChainSlice If this is true, only match the part before first optional chain. if expression is a.b.c?.d.e, only take a.b.c to get property.
              */
             function getPropertyTypesFromTypeAccordingToExpression(type: Type, expressionWithOutKeyword: Expression, optionalChainSlice = false): Type[] | undefined {
                 // This function is designed to be used in the first steps in follow steps:
                 // 1. get all properties' type of the origional types according to expression path
+                //   - In some case, should not narrow type according to the whole path, for example:
+                //   - typeof a.b?.c.d? !== number, === undefined, !==undefined, when we come to a, its type could only be narrowed by a.b.
+                //   - But for typeof a.b?.c.d? === number, when we come to a, it could be narrowed by the full path.
                 // 2. use expression to mark wanted types as 'true'
                 // 3. use the mark to get narrowed type from origional type.
 
-                function tryGetPropertyPathsOfReferenceFromAccessExpression(expressionOri: Expression, _ref?: Node) {
+                function tryGetPropertyPathsOfReferenceFromExpression(expressionOri: Expression, _ref?: Node) {
                     function getTypeDepthIfMatch(expression: Expression, ref: Node): number {
                         let result = 0;
                         let expr = expression;
@@ -21345,12 +21343,13 @@ namespace ts {
                         return -1;
                     }
 
-                    // If expression is a.b["c"].d, the result would be ["b","c","d"]
+                    // If expression is a, return []
+                    // If expression is a.b["c"].d(), return ["b","c","d"]
                     // NOTE: If element expression is not known in compile progress like a.b[f()].d, the result would be undefined
                     // //NOTE: this function need improvement, ElementAccessExpression argument might could be known in compile time, like "1"+"2", we should check "12" in the path, but how to get the value?
-                    function getPropertyPathsOfAccessExpression(expressionOri: AccessExpression, depth: number): __String[] | undefined {
+                    function getPropertyPathsOfAccessExpression(expressionOri: Expression, depth: number): __String[] | undefined {
                         const properties = [];
-                        let expr: LeftHandSideExpression = expressionOri;
+                        let expr: Expression = expressionOri;
                         let propName: __String;
                         while ((expr.kind === SyntaxKind.PropertyAccessExpression || expr.kind === SyntaxKind.ElementAccessExpression) && properties.length !== depth) {
                             if (expr.kind === SyntaxKind.PropertyAccessExpression) {
@@ -21375,12 +21374,12 @@ namespace ts {
                     if (depth < 0) {
                         return undefined;
                     }
-                    const propertyPaths = getPropertyPathsOfAccessExpression(<AccessExpression>expressionOri, depth);
+                    const propertyPaths = getPropertyPathsOfAccessExpression(expressionOri, depth);
                     return propertyPaths;
                 }
 
 
-                function getPropertyTypeFromReferenceAccordingToPath(nonUntionType: Type, paths: __String[], callExpressionFlag: boolean): Type | undefined {
+                function getPropertyTypeFromReferenceAccordingToPath(nonUntionType: Type, paths: __String[], isCallExpression: boolean): Type | undefined {
                     let result: Type | undefined;
                     const pathsLength = paths.length;
 
@@ -21431,7 +21430,7 @@ namespace ts {
                     }
 
                     // here could be improved, now, we access all return type for the signature, but it could use parameter to get reduced return types.
-                    if (callExpressionFlag) {
+                    if (isCallExpression) {
                         if (!result) {
                             return;
                         }
@@ -21464,6 +21463,11 @@ namespace ts {
                 }
 
                 if (optionalChainSlice) {
+                    // For temp, there is no need to real return non-optional part, just consider it as a false condition to optimise.
+                    const quickReturn = true;
+                    if (quickReturn){
+                        return undefined;
+                    }
                     expressionWithOutKeyword = getExpressionWithOutOptionalChain(expressionWithOutKeyword);
                 }
 
@@ -21479,7 +21483,7 @@ namespace ts {
                 if ((nonCallExpressionWithOutKeyword.kind !== SyntaxKind.Identifier && !isAccessExpression(nonCallExpressionWithOutKeyword))) {// || (<AccessExpression>expressionWithOutKeyword).expression.kind === SyntaxKind.ThisKeyword) {
                     return undefined;
                 }
-                const propertyPaths = tryGetPropertyPathsOfReferenceFromAccessExpression(<AccessExpression>nonCallExpressionWithOutKeyword, reference);
+                const propertyPaths = tryGetPropertyPathsOfReferenceFromExpression(nonCallExpressionWithOutKeyword, reference);
                 if (!propertyPaths) {
                     // Not expected here should return. But for the situation not considered, I add this.
                     return undefined;
@@ -21495,17 +21499,14 @@ namespace ts {
 
                 // if propertyTypeArray has unedfined value, it means sometype in the union type could not reach the path.
                 // This should be an error which is not handled by this function, and we just not continue filter tyopes.
-                if (propertyTypeArray.some(type => !type)) {
-                    return undefined;
-                }
-                function assert(propertyTypeArray: (Type | undefined)[]): propertyTypeArray is Type[] {
-                    return !propertyTypeArray.some(type => !type);
-                }
                 if (assert(propertyTypeArray)) {
                     return propertyTypeArray;
                 }
                 else {
                     return undefined;
+                }
+                function assert(propertyTypeArray: (Type | undefined)[]): propertyTypeArray is Type[] {
+                    return !propertyTypeArray.some(type => !type);
                 }
             }
 
@@ -21522,22 +21523,18 @@ namespace ts {
                     if (type.flags & TypeFlags.Union) {
                         let propertyTypeArray: Type[] | undefined;
                         let notNullOrUndefinedFilter = false;  // the aim of this filter is type has 'undefined',filter it out from result.
-                        const isExpressionContainOptionalChain = isAccessExpressionContainOptionalChain(typeOfExpr.expression);
                         // ~undefined means other values except undefiend. boolean, bigint....
                         if ((assumeTrue && literal.text !== "undefined") || (!assumeTrue && literal.text === "undefined")) {
                             // !== undefined
                             // === ~undefined
-                            // use full expression to narrow
+                            // always use full expression to narrow
                             propertyTypeArray = getPropertyTypesFromTypeAccordingToExpression(<UnionType>type, typeOfExpr.expression,/* optionalChainSlice */ false);
                             notNullOrUndefinedFilter = true;
                         }
                         else {
                             // !== ~undefined, === undefined
                             // use non-OptionalChain part to narrow
-                            propertyTypeArray = getPropertyTypesFromTypeAccordingToExpression(<UnionType>type, typeOfExpr.expression,/* optionalChainSlice */ true);
-                            if (isExpressionContainOptionalChain) {
-                                facts = TypeFacts.None;     // The aim is no filter.
-                            }
+                            propertyTypeArray = getPropertyTypesFromTypeAccordingToExpression(<UnionType>type, typeOfExpr.expression,/* optionalChainSlice */ isAccessExpressionContainOptionalChain(typeOfExpr.expression));
                         }
                         if (!propertyTypeArray) {
                             return type;
@@ -21728,13 +21725,12 @@ namespace ts {
 
                 // ~undefined means other values except undefiend. boolean, bigint....
                 if (facts & 0b111111 && !(facts & TypeFacts.EQUndefined)) {
-                    // === ~undefined and not === undefiend
+                    // not contains 'undefiend'
                     // use full expression to narrow
                     propertyTypeArray = getPropertyTypesFromTypeAccordingToExpression(<UnionType>type, expr, /* optionalChainSlice */ false);
                     notNullOrUndefinedFilter = true;
                 }
                 else {
-                    // !== ~undefined, === undefined, !==undefined
                     // use non-OptionalChain part to narrow
                     propertyTypeArray = getPropertyTypesFromTypeAccordingToExpression(<UnionType>type, expr, /* optionalChainSlice */ true);
                     if (facts & TypeFacts.NEUndefined) {
