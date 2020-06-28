@@ -12361,7 +12361,7 @@ namespace ts {
                         ElementFlags.Required;
                 default:
                     return ElementFlags.Required;
-        }
+            }
         }
 
         function getRestTypeElementFlags(node: RestTypeNode | NamedTupleMember) {
@@ -12522,7 +12522,7 @@ namespace ts {
                 lengthSymbol.type = numberType;
             }
             else {
-            const literalTypes = [];
+                const literalTypes = [];
                 for (let i = minLength; i <= arity; i++) literalTypes.push(getLiteralType(i));
                 lengthSymbol.type = getUnionType(literalTypes);
             }
@@ -12557,7 +12557,7 @@ namespace ts {
             return target.objectFlags & ObjectFlags.Tuple && (<TupleType>target).combinedFlags & ElementFlags.Variadic ?
                 createNormalizedTupleType(target as TupleType, typeArguments!) :
                 createTypeReference(target, typeArguments);
-            }
+        }
 
         function createNormalizedTupleType(target: TupleType, elementTypes: readonly Type[]): Type {
             // Transform [A, ...(X | Y | Z)] into [A, ...X] | [A, ...Y] | [A, ...Z]
@@ -12569,7 +12569,7 @@ namespace ts {
             const spreadIndex = findIndex(elementTypes, (t, i) => !!(target.elementFlags[i] & ElementFlags.Variadic) && !(t.flags & TypeFlags.InstantiableNonPrimitive) && !isGenericMappedType(t));
             if (spreadIndex < 0) {
                 return createTypeReference(target, elementTypes);
-        }
+            }
             // We have non-generic variadic elements that need normalization.
             const expandedTypes: Type[] = [];
             const expandedFlags: ElementFlags[] = [];
@@ -12611,13 +12611,13 @@ namespace ts {
                 if (restTypes) {
                     // A rest element was previously added, so simply collect the type of this element.
                     restTypes.push(flags & ElementFlags.Variadic ? getIndexedAccessType(type, numberType) : type);
-            }
+                }
                 else {
                     if (flags & ElementFlags.Required && optionalIndex >= 0) {
                         // Turn preceding optional elements into required elements
                         for (let i = optionalIndex; i < expandedFlags.length; i++) {
                             if (expandedFlags[i] & ElementFlags.Optional) expandedFlags[i] = ElementFlags.Required;
-        }
+                        }
                         optionalIndex = -1;
                     }
                     else if (flags & ElementFlags.Optional && optionalIndex < 0) {
@@ -14259,7 +14259,7 @@ namespace ts {
 
         function getTypeFromRestTypeNode(node: RestTypeNode | NamedTupleMember) {
             return getTypeFromTypeNode(getArrayElementTypeNode(node.type) || node.type);
-                }
+        }
 
         function getArrayElementTypeNode(node: TypeNode): TypeNode | undefined {
             switch (node.kind) {
@@ -14270,12 +14270,12 @@ namespace ts {
                         node = (node as TupleTypeNode).elements[0];
                         if (node.kind === SyntaxKind.RestType || node.kind === SyntaxKind.NamedTupleMember && (node as NamedTupleMember).dotDotDotToken) {
                             return getArrayElementTypeNode((node as RestTypeNode | NamedTupleMember).type);
-                }
-            }
+                        }
+                    }
                     break;
                 case SyntaxKind.ArrayType:
                     return (node as ArrayTypeNode).elementType;
-        }
+            }
             return undefined;
         }
 
@@ -16500,8 +16500,8 @@ namespace ts {
                                     const suggestion = suggestionSymbol ? symbolToString(suggestionSymbol) : undefined;
                                     if (suggestion) {
                                         reportError(Diagnostics.Property_0_does_not_exist_on_type_1_Did_you_mean_2, propName, typeToString(errorTarget), suggestion);
-                                }
-                                else {
+                                    }
+                                    else {
                                         reportError(Diagnostics.Property_0_does_not_exist_on_type_1, propName, typeToString(errorTarget));
                                     }
                                 }
@@ -17456,26 +17456,26 @@ namespace ts {
                         const sourceMinLength = isTupleType(source) ? source.target.minLength : 0;
                         const targetMinLength = target.target.minLength;
                         if (!sourceRestFlag && sourceArity < targetMinLength) {
-                    if (reportErrors) {
+                            if (reportErrors) {
                                 reportError(Diagnostics.Source_has_0_element_s_but_target_requires_1, sourceArity, targetMinLength);
-                    }
-                    return Ternary.False;
-                }
-                        if (!targetRestFlag && targetArity < sourceMinLength) {
-                                if (reportErrors) {
-                                reportError(Diagnostics.Source_has_0_element_s_but_target_allows_only_1, sourceMinLength, targetArity);
-                                }
-                                return Ternary.False;
                             }
+                            return Ternary.False;
+                        }
+                        if (!targetRestFlag && targetArity < sourceMinLength) {
+                            if (reportErrors) {
+                                reportError(Diagnostics.Source_has_0_element_s_but_target_allows_only_1, sourceMinLength, targetArity);
+                            }
+                            return Ternary.False;
+                        }
                         if (!targetRestFlag && sourceRestFlag) {
                             if (reportErrors) {
                                 if (sourceMinLength < targetMinLength) {
                                     reportError(Diagnostics.Target_requires_0_element_s_but_source_may_have_fewer, targetMinLength);
-                        }
+                                }
                                 else {
                                     reportError(Diagnostics.Target_allows_only_0_element_s_but_source_may_have_more, targetArity);
-                    }
-                }
+                                }
+                            }
                             return Ternary.False;
                         }
                         const maxArity = Math.max(sourceArity, targetArity);
@@ -17484,12 +17484,12 @@ namespace ts {
                             const sourceFlags = isTupleType(source) && i < sourceArity ? source.target.elementFlags[i] : sourceRestFlag;
                             if (sourceFlags && targetFlags) {
                                 if (targetFlags & ElementFlags.Variadic && !(sourceFlags & ElementFlags.Variadic) ||
-                                   (sourceFlags & ElementFlags.Variadic && !(targetFlags & ElementFlags.Variable))) {
-                            if (reportErrors) {
+                                    (sourceFlags & ElementFlags.Variadic && !(targetFlags & ElementFlags.Variable))) {
+                                    if (reportErrors) {
                                         reportError(Diagnostics.Element_at_index_0_is_variadic_in_one_type_but_not_in_the_other, i);
-                            }
-                            return Ternary.False;
-                        }
+                                    }
+                                    return Ternary.False;
+                                }
                                 if (targetFlags & ElementFlags.Required) {
                                     if (!(sourceFlags & ElementFlags.Required)) {
                                         if (reportErrors) {
@@ -17502,17 +17502,17 @@ namespace ts {
                                 const targetType = getTypeArguments(target)[Math.min(i, targetArity - 1)];
                                 const targetCheckType = sourceFlags & ElementFlags.Variadic && targetFlags & ElementFlags.Rest ? createArrayType(targetType) : targetType;
                                 const related = isRelatedTo(sourceType, targetCheckType, reportErrors, /*headMessage*/ undefined, intersectionState);
-                            if (!related) {
-                                if (reportErrors) {
+                                if (!related) {
+                                    if (reportErrors) {
                                         reportIncompatibleError(Diagnostics.Types_of_property_0_are_incompatible, i);
+                                    }
+                                    return Ternary.False;
                                 }
-                                return Ternary.False;
+                                result &= related;
                             }
-                            result &= related;
                         }
-                    }
                         return result;
-                }
+                    }
                     if (target.target.combinedFlags & ElementFlags.Variable) {
                         return Ternary.False;
                     }
@@ -19670,25 +19670,25 @@ namespace ts {
                             if (isTupleType(source) && isTupleTypeStructureMatching(source, target)) {
                                 for (let i = 0; i < targetArity; i++) {
                                     inferFromTypes(getTypeArguments(source)[i], elementTypes[i]);
-                            }
-                                return;
                                 }
+                                return;
+                            }
                             const startLength = isTupleType(source) ? Math.min(source.target.fixedLength, target.target.fixedLength) : 0;
                             const sourceRestType = !isTupleType(source) || sourceArity > 0 && source.target.elementFlags[sourceArity - 1] & ElementFlags.Rest ?
                                 getTypeArguments(source)[sourceArity - 1] : undefined;
                             const endLength = !(target.target.combinedFlags & ElementFlags.Variable) ? 0 :
                                 sourceRestType ? getEndLengthOfType(target) :
-                                Math.min(getEndLengthOfType(source), getEndLengthOfType(target));
+                                    Math.min(getEndLengthOfType(source), getEndLengthOfType(target));
                             const sourceEndLength = sourceRestType ? 0 : endLength;
                             // Infer between starting fixed elements.
                             for (let i = 0; i < startLength; i++) {
                                 inferFromTypes(getTypeArguments(source)[i], elementTypes[i]);
-                                }
+                            }
                             if (sourceRestType && sourceArity - startLength === 1) {
                                 // Single rest element remains in source, infer from that to every element in target
                                 for (let i = startLength; i < targetArity - endLength; i++) {
                                     inferFromTypes(elementFlags[i] & ElementFlags.Variadic ? createArrayType(sourceRestType) : sourceRestType, elementTypes[i]);
-                            }
+                                }
                             }
                             else {
                                 const middleLength = targetArity - startLength - endLength;
@@ -24072,7 +24072,7 @@ namespace ts {
                     if (isArrayLikeType(spreadType)) {
                         elementTypes.push(spreadType);
                         elementFlags.push(ElementFlags.Variadic);
-                }
+                    }
                     else if (inDestructuringPattern) {
                         // Given the following situation:
                         //    var c: {};
@@ -24089,24 +24089,24 @@ namespace ts {
                         const restElementType = getIndexTypeOfType(spreadType, IndexKind.Number) ||
                             getIteratedTypeOrElementType(IterationUse.Destructuring, spreadType, undefinedType, /*errorNode*/ undefined, /*checkAssignability*/ false) ||
                             unknownType;
-                            elementTypes.push(restElementType);
+                        elementTypes.push(restElementType);
                         elementFlags.push(ElementFlags.Rest);
-                        }
+                    }
                     else {
                         elementTypes.push(checkIteratedTypeOrElementType(IterationUse.Spread, spreadType, undefinedType, (<SpreadElement>e).expression));
                         elementFlags.push(ElementFlags.Rest);
                     }
                 }
-                    else {
-                        const elementContextualType = getContextualTypeForElementExpression(contextualType, elementTypes.length);
-                        const type = checkExpressionForMutableLocation(e, checkMode, elementContextualType, forceTuple);
-                        elementTypes.push(type);
+                else {
+                    const elementContextualType = getContextualTypeForElementExpression(contextualType, elementTypes.length);
+                    const type = checkExpressionForMutableLocation(e, checkMode, elementContextualType, forceTuple);
+                    elementTypes.push(type);
                     elementFlags.push(ElementFlags.Required);
-                    }
-                    }
+                }
+            }
             if (inDestructuringPattern) {
                 return createTupleType(elementTypes, elementFlags);
-                }
+            }
             if (forceTuple || inConstContext || contextualType && forEachType(contextualType, isTupleLikeType)) {
                 return createArrayLiteralType(createTupleType(elementTypes, elementFlags, /*readonly*/ inConstContext));
             }
@@ -26013,8 +26013,8 @@ namespace ts {
                 const spreadArgIndex = getSpreadArgumentIndex(args);
                 if (spreadArgIndex >= 0) {
                     return spreadArgIndex >= getMinArgumentCount(signature) && (hasEffectiveRestParameter(signature) || spreadArgIndex < getParameterCount(signature));
-                    }
-                        }
+                }
+            }
 
             // Too many arguments implies incorrect arity.
             if (!hasEffectiveRestParameter(signature) && argCount > effectiveParameterCount) {
@@ -26199,22 +26199,22 @@ namespace ts {
                     if (isArrayLikeType(spreadType)) {
                         types.push(spreadType);
                         flags.push(ElementFlags.Variadic);
-                }
+                    }
                     else {
                         types.push(checkIteratedTypeOrElementType(IterationUse.Spread, spreadType, undefinedType, arg.kind === SyntaxKind.SpreadElement ? (<SpreadElement>arg).expression : arg));
                         flags.push(ElementFlags.Rest);
-                }
+                    }
                 }
                 else {
                     const contextualType = getIndexedAccessType(restType, getLiteralType(i - index));
                     const argType = checkExpressionWithContextualType(arg, contextualType, context, checkMode);
-                const hasPrimitiveContextualType = maybeTypeOfKind(contextualType, TypeFlags.Primitive | TypeFlags.Index);
-                types.push(hasPrimitiveContextualType ? getRegularTypeOfLiteralType(argType) : getWidenedLiteralType(argType));
+                    const hasPrimitiveContextualType = maybeTypeOfKind(contextualType, TypeFlags.Primitive | TypeFlags.Index);
+                    types.push(hasPrimitiveContextualType ? getRegularTypeOfLiteralType(argType) : getWidenedLiteralType(argType));
                     flags.push(ElementFlags.Required);
-            }
+                }
                 if (arg.kind === SyntaxKind.SyntheticExpression && (arg as SyntheticExpression).tupleNameSource) {
                     names.push((arg as SyntheticExpression).tupleNameSource!);
-        }
+                }
             }
             return createTupleType(types, flags, /*readonly*/ false, length(names) === length(types) ? names : undefined);
         }
@@ -26510,10 +26510,10 @@ namespace ts {
                                 !!(flags & ElementFlags.Variable), spreadType.target.labeledElementDeclarations?.[i]);
                             effectiveArgs.push(syntheticArg);
                         });
-                }
+                    }
                     else {
                         effectiveArgs.push(arg);
-            }
+                    }
                 }
                 return effectiveArgs;
             }
@@ -28138,7 +28138,7 @@ namespace ts {
             const names = [];
             for (let i = pos; i < parameterCount; i++) {
                 if (!restType || i < parameterCount - 1) {
-                types.push(getTypeAtPosition(source, i));
+                    types.push(getTypeAtPosition(source, i));
                     flags.push(i < minArgumentCount ? ElementFlags.Required : ElementFlags.Optional);
                 }
                 else {
@@ -28149,9 +28149,9 @@ namespace ts {
                 if (name) {
                     names.push(name);
                 }
-                }
-            return createTupleType(types, flags, /*readonly*/ false, length(names) === length(types) ? names : undefined);
             }
+            return createTupleType(types, flags, /*readonly*/ false, length(names) === length(types) ? names : undefined);
+        }
 
         function getParameterCount(signature: Signature) {
             const length = signature.parameters.length;
@@ -28194,7 +28194,7 @@ namespace ts {
                 const restType = getTypeOfSymbol(signature.parameters[signature.parameters.length - 1]);
                 if (!isTupleType(restType)) {
                     return restType;
-            }
+                }
                 if (restType.target.hasRestElement) {
                     return sliceTupleType(restType, restType.target.fixedLength);
                 }
@@ -31286,7 +31286,7 @@ namespace ts {
                         grammarErrorOnNode(e, Diagnostics.A_rest_element_must_be_last_in_a_tuple_type);
                         break;
                     }
-                    }
+                }
                 else if (flags & ElementFlags.Optional) {
                     seenOptionalElement = true;
                 }
