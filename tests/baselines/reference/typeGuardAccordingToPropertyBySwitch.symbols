@@ -389,29 +389,3 @@ function f3(bar: X) {
     }
 }
 
-/////////////////////////////////////////////////////////
-//  some case that need discuss further, This is not that right.
-function f1_(u: Union1) {
->f1_ : Symbol(f1_, Decl(typeGuardAccordingToPropertyBySwitch.ts, 177, 1))
->u : Symbol(u, Decl(typeGuardAccordingToPropertyBySwitch.ts, 181, 13))
->Union1 : Symbol(Union1, Decl(typeGuardAccordingToPropertyBySwitch.ts, 51, 1))
-
-    const tmp1 = u.key;
->tmp1 : Symbol(tmp1, Decl(typeGuardAccordingToPropertyBySwitch.ts, 182, 9))
->u.key : Symbol(key, Decl(typeGuardAccordingToPropertyBySwitch.ts, 6, 20), Decl(typeGuardAccordingToPropertyBySwitch.ts, 11, 20), Decl(typeGuardAccordingToPropertyBySwitch.ts, 21, 19))
->u : Symbol(u, Decl(typeGuardAccordingToPropertyBySwitch.ts, 181, 13))
->key : Symbol(key, Decl(typeGuardAccordingToPropertyBySwitch.ts, 6, 20), Decl(typeGuardAccordingToPropertyBySwitch.ts, 11, 20), Decl(typeGuardAccordingToPropertyBySwitch.ts, 21, 19))
-
-    if (typeof tmp1 !== 'boolean') {
->tmp1 : Symbol(tmp1, Decl(typeGuardAccordingToPropertyBySwitch.ts, 182, 9))
-
-        u;          //Union1
->u : Symbol(u, Decl(typeGuardAccordingToPropertyBySwitch.ts, 181, 13))
-
-        u.key;      //number | boolean
->u.key : Symbol(key, Decl(typeGuardAccordingToPropertyBySwitch.ts, 6, 20), Decl(typeGuardAccordingToPropertyBySwitch.ts, 11, 20), Decl(typeGuardAccordingToPropertyBySwitch.ts, 21, 19))
->u : Symbol(u, Decl(typeGuardAccordingToPropertyBySwitch.ts, 181, 13))
->key : Symbol(key, Decl(typeGuardAccordingToPropertyBySwitch.ts, 6, 20), Decl(typeGuardAccordingToPropertyBySwitch.ts, 11, 20), Decl(typeGuardAccordingToPropertyBySwitch.ts, 21, 19))
-    }
-}
-

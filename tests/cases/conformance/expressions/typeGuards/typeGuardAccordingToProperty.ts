@@ -257,13 +257,3 @@ function f3(bar: X) {
         let y = bar.y; // string
     }
 }
-
-/////////////////////////////////////////////////////////
-//  some case that need discuss further, This is not that right.
-function f1_(u: Union1) {
-    const tmp1 = u.key;
-    if (typeof tmp1 !== 'boolean') {
-        u;          //Union1
-        u.key;      //number | boolean
-    }
-}

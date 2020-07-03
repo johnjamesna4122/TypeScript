@@ -421,31 +421,3 @@ function f3(bar: X) {
     }
 }
 
-/////////////////////////////////////////////////////////
-//  some case that need discuss further, This is not that right.
-function f1_(u: Union1) {
->f1_ : (u: Union1) => void
->u : Union1
-
-    const tmp1 = u.key;
->tmp1 : number | boolean
->u.key : number | boolean
->u : Union1
->key : number | boolean
-
-    if (typeof tmp1 !== 'boolean') {
->typeof tmp1 !== 'boolean' : boolean
->typeof tmp1 : "string" | "number" | "bigint" | "boolean" | "symbol" | "undefined" | "object" | "function"
->tmp1 : number | boolean
->'boolean' : "boolean"
-
-        u;          //Union1
->u : Union1
-
-        u.key;      //number | boolean
->u.key : number | boolean
->u : Union1
->key : number | boolean
-    }
-}
-

@@ -21325,7 +21325,7 @@ namespace ts {
                         }
                     }
                     // next line is copied from isDiscriminantProperty
-                    return (checkFlags & CheckFlags.Discriminant) === CheckFlags.Discriminant && !maybeTypeOfKind(getUnionType(types), TypeFlags.Instantiable);;
+                    return (checkFlags & CheckFlags.Discriminant) === CheckFlags.Discriminant && !maybeTypeOfKind(getUnionType(types), TypeFlags.Instantiable);
                 }
 
                 // why it is not "!(declaredType.flags & TypeFlags.Union) || !isAccessExpression(expr)"
@@ -21384,7 +21384,7 @@ namespace ts {
                     }
                     // However, I still use declared type, and put it here. The main aim is for future improving.
                     // We could deal with 'this' type and use ugly code to deal with Condition 2, then we could avoid use declared type at least for now
-                    // passing all tests and issue #39110/#39114, but does it deserve? Is it clearly enough?
+                    // passing all tests and issue #39110/#39114, but does it deserve? Is the code clear enough?
                     return true;
                 }
 
@@ -21631,6 +21631,33 @@ namespace ts {
                 // 2. use expression to mark wanted types as 'true'
                 // 3. use the mark to get narrowed type from origional type.
 
+                // If expression is a, return []
+                // If expression is a.b["c"].d(), return ["b","c","d"]
+                // NOTE: If element expression is not known in compile progress like a.b[f()].d, the result would be undefined
+                // //NOTE: this function need improvement, ElementAccessExpression argument might could be known in compile time, like "1"+"2", we should check "12" in the path, but how to get the value?
+                function getPropertyPathsOfAccessExpression(expressionOri: Expression, depth: number): __String[] | undefined {
+                    const properties = [];
+                    let expr: Expression = expressionOri;
+                    let propName: __String;
+                    while ((expr.kind === SyntaxKind.PropertyAccessExpression || expr.kind === SyntaxKind.ElementAccessExpression) && properties.length !== depth) {
+                        if (expr.kind === SyntaxKind.PropertyAccessExpression) {
+                            propName = (<PropertyAccessExpression>expr).name.escapedText;
+                        }
+                        else {
+                            const argExpression = (<ElementAccessExpression>expr).argumentExpression;
+                            if (isLiteralExpression(argExpression)) {
+                                propName = escapeLeadingUnderscores(argExpression.text);
+                            }
+                            else {
+                                return undefined;
+                            }
+                        }
+                        properties.unshift(propName);
+                        expr = (<PropertyAccessExpression>expr).expression;
+                    }
+                    return properties;
+                }
+
                 function tryGetPropertyPathsOfReferenceFromExpression(expressionOri: Expression, _ref?: Node) {
                     function getTypeDepthIfMatch(expression: Expression, ref: Node): number {
                         let result = 0;
@@ -21646,33 +21673,6 @@ namespace ts {
                             }
                         }
                         return -1;
-                    }
-
-                    // If expression is a, return []
-                    // If expression is a.b["c"].d(), return ["b","c","d"]
-                    // NOTE: If element expression is not known in compile progress like a.b[f()].d, the result would be undefined
-                    // //NOTE: this function need improvement, ElementAccessExpression argument might could be known in compile time, like "1"+"2", we should check "12" in the path, but how to get the value?
-                    function getPropertyPathsOfAccessExpression(expressionOri: Expression, depth: number): __String[] | undefined {
-                        const properties = [];
-                        let expr: Expression = expressionOri;
-                        let propName: __String;
-                        while ((expr.kind === SyntaxKind.PropertyAccessExpression || expr.kind === SyntaxKind.ElementAccessExpression) && properties.length !== depth) {
-                            if (expr.kind === SyntaxKind.PropertyAccessExpression) {
-                                propName = (<PropertyAccessExpression>expr).name.escapedText;
-                            }
-                            else {
-                                const argExpression = (<ElementAccessExpression>expr).argumentExpression;
-                                if (isLiteralExpression(argExpression)) {
-                                    propName = escapeLeadingUnderscores(argExpression.text);
-                                }
-                                else {
-                                    return undefined;
-                                }
-                            }
-                            properties.unshift(propName);
-                            expr = (<PropertyAccessExpression>expr).expression;
-                        }
-                        return properties;
                     }
 
                     const depth = getTypeDepthIfMatch(expressionOri, reference);

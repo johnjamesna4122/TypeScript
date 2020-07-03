@@ -700,29 +700,3 @@ function f3(bar: X) {
     }
 }
 
-/////////////////////////////////////////////////////////
-//  some case that need discuss further, This is not that right.
-function f1_(u: Union1) {
->f1_ : Symbol(f1_, Decl(typeGuardAccordingToProperty.ts, 256, 1))
->u : Symbol(u, Decl(typeGuardAccordingToProperty.ts, 260, 13))
->Union1 : Symbol(Union1, Decl(typeGuardAccordingToProperty.ts, 51, 1))
-
-    const tmp1 = u.key;
->tmp1 : Symbol(tmp1, Decl(typeGuardAccordingToProperty.ts, 261, 9))
->u.key : Symbol(key, Decl(typeGuardAccordingToProperty.ts, 6, 20), Decl(typeGuardAccordingToProperty.ts, 11, 20), Decl(typeGuardAccordingToProperty.ts, 21, 19))
->u : Symbol(u, Decl(typeGuardAccordingToProperty.ts, 260, 13))
->key : Symbol(key, Decl(typeGuardAccordingToProperty.ts, 6, 20), Decl(typeGuardAccordingToProperty.ts, 11, 20), Decl(typeGuardAccordingToProperty.ts, 21, 19))
-
-    if (typeof tmp1 !== 'boolean') {
->tmp1 : Symbol(tmp1, Decl(typeGuardAccordingToProperty.ts, 261, 9))
-
-        u;          //Union1
->u : Symbol(u, Decl(typeGuardAccordingToProperty.ts, 260, 13))
-
-        u.key;      //number | boolean
->u.key : Symbol(key, Decl(typeGuardAccordingToProperty.ts, 6, 20), Decl(typeGuardAccordingToProperty.ts, 11, 20), Decl(typeGuardAccordingToProperty.ts, 21, 19))
->u : Symbol(u, Decl(typeGuardAccordingToProperty.ts, 260, 13))
->key : Symbol(key, Decl(typeGuardAccordingToProperty.ts, 6, 20), Decl(typeGuardAccordingToProperty.ts, 11, 20), Decl(typeGuardAccordingToProperty.ts, 21, 19))
-    }
-}
-
