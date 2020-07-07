@@ -37,6 +37,12 @@ const tc2 = concat(['hello'], [42]);
 const tc3 = concat([1, 2, 3], sa);
 const tc4 = concat(sa, [1, 2, 3]);  // Ideally would be [...string[], number, number, number]
 
+function concat2<T extends readonly unknown[], U extends readonly unknown[]>(t: T, u: U) {
+    return [...t, ...u];  // (T[number] | U[number])[]
+}
+
+const tc5 = concat2([1, 2, 3] as const, [4, 5, 6] as const);  // (1 | 2 | 3 | 4 | 5 | 6)[]
+
 // Spread arguments
 
 declare function foo1(a: number, b: string, c: boolean, ...d: number[]): void;
@@ -170,6 +176,36 @@ function f12<T extends readonly unknown[]>(t: T, m: [...T], r: readonly [...T]) 
     r = m;
 }
 
+function f13<T extends string[], U extends T>(t0: T, t1: [...T], t2: [...U]) {
+    t0 = t1;
+    t0 = t2;
+    t1 = t0;
+    t1 = t2;
+    t2 = t0;  // Error
+    t2 = t1;  // Error
+}
+
+function f14<T extends readonly string[], U extends T>(t0: T, t1: [...T], t2: [...U]) {
+    t0 = t1;
+    t0 = t2;
+    t1 = t0;  // Error
+    t1 = t2;
+    t2 = t0;  // Error
+    t2 = t1;  // Error
+}
+
+function f15<T extends string[], U extends T>(k0: keyof T, k1: keyof [...T], k2: keyof [...U], k3: keyof [1, 2, ...T]) {
+    k0 = 'length';
+    k1 = 'length';
+    k2 = 'length';
+    k0 = 'slice';
+    k1 = 'slice';
+    k2 = 'slice';
+    k3 = '0';
+    k3 = '1';
+    k3 = '2';  // Error
+}
+
 // Inference between variadic tuple types
 
 type First<T extends readonly unknown[]> = T[0];
@@ -298,3 +334,32 @@ call('hello', 32, (a, b) => 42);
 // Requires [starting-fixed-part, ...rest-part, ending-fixed-part] tuple structure
 
 call(...sa, (...x) => 42);
+
+// No inference to ending optional elements (except with identical structure)
+
+declare function f20<T extends unknown[] = []>(args: [...T, number?]): T;
+
+function f21<U extends string[]>(args: [...U, number?]) {
+    let v1 = f20(args);  // U
+    let v2 = f20(["foo", "bar"]);  // []
+    let v3 = f20(["foo", 42]);  // []
+}
+
+declare function f22<T extends unknown[] = []>(args: [...T, number]): T;
+declare function f22<T extends unknown[] = []>(args: [...T]): T;
+
+function f23<U extends string[]>(args: [...U, number]) {
+    let v1 = f22(args);  // U
+    let v2 = f22(["foo", "bar"]);  // [string, string]
+    let v3 = f22(["foo", 42]);  // [string]
+}
+
+// Repro from #39327
+
+interface Desc<A extends unknown[], T> {
+    readonly f: (...args: A) => T;
+    bind<T extends unknown[], U extends unknown[], R>(this: Desc<[...T, ...U], R>, ...args: T): Desc<[...U], R>;
+}
+
+declare const a: Desc<[string, number, boolean], object>;
+const b = a.bind("", 1);  // Desc<[boolean], object>

@@ -35,6 +35,12 @@ const tc2 = concat(['hello'], [42]);
 const tc3 = concat([1, 2, 3], sa);
 const tc4 = concat(sa, [1, 2, 3]);  // Ideally would be [...string[], number, number, number]
 
+function concat2<T extends readonly unknown[], U extends readonly unknown[]>(t: T, u: U) {
+    return [...t, ...u];  // (T[number] | U[number])[]
+}
+
+const tc5 = concat2([1, 2, 3] as const, [4, 5, 6] as const);  // (1 | 2 | 3 | 4 | 5 | 6)[]
+
 // Spread arguments
 
 declare function foo1(a: number, b: string, c: boolean, ...d: number[]): void;
@@ -168,6 +174,36 @@ function f12<T extends readonly unknown[]>(t: T, m: [...T], r: readonly [...T]) 
     r = m;
 }
 
+function f13<T extends string[], U extends T>(t0: T, t1: [...T], t2: [...U]) {
+    t0 = t1;
+    t0 = t2;
+    t1 = t0;
+    t1 = t2;
+    t2 = t0;  // Error
+    t2 = t1;  // Error
+}
+
+function f14<T extends readonly string[], U extends T>(t0: T, t1: [...T], t2: [...U]) {
+    t0 = t1;
+    t0 = t2;
+    t1 = t0;  // Error
+    t1 = t2;
+    t2 = t0;  // Error
+    t2 = t1;  // Error
+}
+
+function f15<T extends string[], U extends T>(k0: keyof T, k1: keyof [...T], k2: keyof [...U], k3: keyof [1, 2, ...T]) {
+    k0 = 'length';
+    k1 = 'length';
+    k2 = 'length';
+    k0 = 'slice';
+    k1 = 'slice';
+    k2 = 'slice';
+    k3 = '0';
+    k3 = '1';
+    k3 = '2';  // Error
+}
+
 // Inference between variadic tuple types
 
 type First<T extends readonly unknown[]> = T[0];
@@ -297,6 +333,35 @@ call('hello', 32, (a, b) => 42);
 
 call(...sa, (...x) => 42);
 
+// No inference to ending optional elements (except with identical structure)
+
+declare function f20<T extends unknown[] = []>(args: [...T, number?]): T;
+
+function f21<U extends string[]>(args: [...U, number?]) {
+    let v1 = f20(args);  // U
+    let v2 = f20(["foo", "bar"]);  // []
+    let v3 = f20(["foo", 42]);  // []
+}
+
+declare function f22<T extends unknown[] = []>(args: [...T, number]): T;
+declare function f22<T extends unknown[] = []>(args: [...T]): T;
+
+function f23<U extends string[]>(args: [...U, number]) {
+    let v1 = f22(args);  // U
+    let v2 = f22(["foo", "bar"]);  // [string, string]
+    let v3 = f22(["foo", 42]);  // [string]
+}
+
+// Repro from #39327
+
+interface Desc<A extends unknown[], T> {
+    readonly f: (...args: A) => T;
+    bind<T extends unknown[], U extends unknown[], R>(this: Desc<[...T, ...U], R>, ...args: T): Desc<[...U], R>;
+}
+
+declare const a: Desc<[string, number, boolean], object>;
+const b = a.bind("", 1);  // Desc<[boolean], object>
+
 
 //// [variadicTuples1.js]
 "use strict";
@@ -320,6 +385,10 @@ var tc1 = concat([], []);
 var tc2 = concat(['hello'], [42]);
 var tc3 = concat([1, 2, 3], sa);
 var tc4 = concat(sa, [1, 2, 3]); // Ideally would be [...string[], number, number, number]
+function concat2(t, u) {
+    return __spreadArrays(t, u); // (T[number] | U[number])[]
+}
+var tc5 = concat2([1, 2, 3], [4, 5, 6]); // (1 | 2 | 3 | 4 | 5 | 6)[]
 function foo2(t1, t2, a1) {
     foo1(1, 'abc', true, 42, 43, 44);
     foo1.apply(void 0, __spreadArrays(t1, [true, 42, 43, 44]));
@@ -404,6 +473,33 @@ function f12(t, m, r) {
     r = t;
     r = m;
 }
+function f13(t0, t1, t2) {
+    t0 = t1;
+    t0 = t2;
+    t1 = t0;
+    t1 = t2;
+    t2 = t0; // Error
+    t2 = t1; // Error
+}
+function f14(t0, t1, t2) {
+    t0 = t1;
+    t0 = t2;
+    t1 = t0; // Error
+    t1 = t2;
+    t2 = t0; // Error
+    t2 = t1; // Error
+}
+function f15(k0, k1, k2, k3) {
+    k0 = 'length';
+    k1 = 'length';
+    k2 = 'length';
+    k0 = 'slice';
+    k1 = 'slice';
+    k2 = 'slice';
+    k3 = '0';
+    k3 = '1';
+    k3 = '2'; // Error
+}
 // Inference to [...T, ...U] with implied arity for T
 function curry(f) {
     var a = [];
@@ -461,6 +557,17 @@ call.apply(void 0, __spreadArrays(sa, [function () {
         }
         return 42;
     }]));
+function f21(args) {
+    var v1 = f20(args); // U
+    var v2 = f20(["foo", "bar"]); // []
+    var v3 = f20(["foo", 42]); // []
+}
+function f23(args) {
+    var v1 = f22(args); // U
+    var v2 = f22(["foo", "bar"]); // [string, string]
+    var v3 = f22(["foo", 42]); // [string]
+}
+var b = a.bind("", 1); // Desc<[boolean], object>
 
 
 //// [variadicTuples1.d.ts]
@@ -483,6 +590,8 @@ declare const tc1: [];
 declare const tc2: [string, number];
 declare const tc3: [number, number, number, ...string[]];
 declare const tc4: (string | number)[];
+declare function concat2<T extends readonly unknown[], U extends readonly unknown[]>(t: T, u: U): (T[number] | U[number])[];
+declare const tc5: (2 | 4 | 1 | 3 | 6 | 5)[];
 declare function foo1(a: number, b: string, c: boolean, ...d: number[]): void;
 declare function foo2(t1: [number, string], t2: [boolean], a1: number[]): void;
 declare function foo3<T extends unknown[]>(x: number, ...args: [...T, number]): T;
@@ -510,6 +619,9 @@ declare function gx2<U extends unknown[], V extends readonly unknown[]>(u: U, v:
 declare function f10<T extends string[], U extends T>(x: [string, ...unknown[]], y: [string, ...T], z: [string, ...U]): void;
 declare function f11<T extends unknown[]>(t: T, m: [...T], r: readonly [...T]): void;
 declare function f12<T extends readonly unknown[]>(t: T, m: [...T], r: readonly [...T]): void;
+declare function f13<T extends string[], U extends T>(t0: T, t1: [...T], t2: [...U]): void;
+declare function f14<T extends readonly string[], U extends T>(t0: T, t1: [...T], t2: [...U]): void;
+declare function f15<T extends string[], U extends T>(k0: keyof T, k1: keyof [...T], k2: keyof [...U], k3: keyof [1, 2, ...T]): void;
 declare type First<T extends readonly unknown[]> = T[0];
 declare type DropFirst<T extends readonly unknown[]> = T extends readonly [any, ...infer U] ? U : [...T];
 declare type Last<T extends readonly unknown[]> = T extends readonly [...infer _, infer U] ? U : undefined;
@@ -597,3 +709,14 @@ declare const c22: (...b: string[]) => number;
 declare function curry2<T extends unknown[], U extends unknown[], R>(f: (...args: [...T, ...U]) => R, t: [...T], u: [...U]): R;
 declare function fn10(a: string, b: number, c: boolean): string[];
 declare function call<T extends unknown[], R>(...args: [...T, (...args: T) => R]): [T, R];
+declare function f20<T extends unknown[] = []>(args: [...T, number?]): T;
+declare function f21<U extends string[]>(args: [...U, number?]): void;
+declare function f22<T extends unknown[] = []>(args: [...T, number]): T;
+declare function f22<T extends unknown[] = []>(args: [...T]): T;
+declare function f23<U extends string[]>(args: [...U, number]): void;
+interface Desc<A extends unknown[], T> {
+    readonly f: (...args: A) => T;
+    bind<T extends unknown[], U extends unknown[], R>(this: Desc<[...T, ...U], R>, ...args: T): Desc<[...U], R>;
+}
+declare const a: Desc<[string, number, boolean], object>;
+declare const b: Desc<[boolean], object>;

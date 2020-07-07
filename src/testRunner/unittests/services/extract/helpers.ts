@@ -7,7 +7,7 @@ namespace ts {
 
     interface Test {
         source: string;
-        ranges: Map<Range>;
+        ranges: ESMap<string, Range>;
     }
 
     export function extractTest(source: string): Test {
