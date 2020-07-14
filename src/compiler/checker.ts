@@ -19738,7 +19738,7 @@ namespace ts {
                                 getTypeArguments(source)[sourceArity - 1] : undefined;
                             const endLength = !(target.target.combinedFlags & ElementFlags.Variable) ? 0 :
                                 sourceRestType ? getEndLengthOfType(target) :
-                                    Math.min(getEndLengthOfType(source), getEndLengthOfType(target));
+                                Math.min(getEndLengthOfType(source), getEndLengthOfType(target));
                             const sourceEndLength = sourceRestType ? 0 : endLength;
                             // Infer between starting fixed elements.
                             for (let i = 0; i < startLength; i++) {
@@ -20527,13 +20527,13 @@ namespace ts {
             return type.flags & TypeFlags.Union ? every((<UnionType>type).types, f) : f(type);
         }
 
-        function filterType(type: Type, f: (t: Type) => boolean): Type {
+        function filterType(type: Type, f: (t: Type, index: number) => boolean): Type {
             if (type.flags & TypeFlags.Union) {
                 const types = (<UnionType>type).types;
                 const filtered = filter(types, f);
                 return filtered === types ? type : getUnionTypeFromSortedList(filtered, (<UnionType>type).objectFlags);
             }
-            return type.flags & TypeFlags.Never || f(type) ? type : neverType;
+            return type.flags & TypeFlags.Never || f(type, 0) ? type : neverType;
         }
 
         function countTypes(type: Type) {
@@ -21193,7 +21193,7 @@ namespace ts {
                 if (isMatchingReference(reference, expr)) {
                     type = narrowTypeBySwitchOnDiscriminant(type, flow.switchStatement, flow.clauseStart, flow.clauseEnd);
                 }
-                else if (expr.kind === SyntaxKind.TypeOfExpression){
+                else if (expr.kind === SyntaxKind.TypeOfExpression) {
                     type = narrowBySwitchOnTypeOf(type, flow.switchStatement, flow.clauseStart, flow.clauseEnd);
                 }
                 else {
@@ -21362,7 +21362,7 @@ namespace ts {
 
             function isMatchingReferenceDiscriminantNew(expr: Expression, computedType: Type) {
                 // main part is copied from function createUnionOrIntersectionProperty
-                function isTypeArrayDiscriminant(types: Type[], nullableFlag = false) {
+                function isTypeArrayDiscriminant(types: Type[], nullableFlag: boolean) {
                     let checkFlags = 0;
                     let firstType: Type | undefined;
                     for (const type of types) {
@@ -21386,8 +21386,6 @@ namespace ts {
                     return (checkFlags & CheckFlags.Discriminant) === CheckFlags.Discriminant && !maybeTypeOfKind(getUnionType(types), TypeFlags.Instantiable);
                 }
 
-                // why it is not "!(declaredType.flags & TypeFlags.Union) || !isAccessExpression(expr)"
-                // the reason is below.
                 if (!isAccessExpression(expr)) {
                     return false;
                 }
@@ -21396,10 +21394,9 @@ namespace ts {
                     return false;
                 }
 
-
                 if (!(computedType.flags & TypeFlags.Union)) {
-                    // Whether to use declaredType is a big deal, desvering a lot of comments.
-                    // The Key is "How to judge one type could be narrowed"
+                    // Whether we fall back to the declared type depends entirely on how
+                    // the type could be subsequently narrowed.
                     /**
                      * Condition 1: computed type is not union any more.
                      *  // omit the defination, which is easy to be infered through code and intention
@@ -21447,14 +21444,9 @@ namespace ts {
                 }
 
                 // if root has undefiend|null, this need deal with differently.
-                let isRootHasUndefinedOrNull = false;
-                (<UnionType>computedType).types.forEach(t => {
-                    if (t.flags & TypeFlags.Nullable) {
-                        isRootHasUndefinedOrNull = true;
-                    }
-                });
+                const computedTypeIsNullable = maybeTypeOfKind(computedType, TypeFlags.Nullable);
 
-                return isTypeArrayDiscriminant(propertyTypeArray, isRootHasUndefinedOrNull);
+                return isTypeArrayDiscriminant(propertyTypeArray, computedTypeIsNullable);
             }
 
             function narrowTypeByDiscriminantNew(type: Type, access: AccessExpression, narrowTypeCb: (t: Type) => Type): Type {
@@ -21463,11 +21455,8 @@ namespace ts {
                     return type;
                 }
                 const subtypes: Type[] = [];
-                propertyTypeArray.forEach(propType => {
-                    if (propType.flags & TypeFlags.Union) {
-                        (propType as UnionType).types.forEach(t => subtypes.push(t));
-                    }
-                    else subtypes.push(propType);
+                forEach(propertyTypeArray, propType => {
+                    forEachType(propType, t => subtypes.push(t));
                 });
                 const bigUnion = getUnionType(subtypes);
                 const narrowedPropType = narrowTypeCb(bigUnion);
@@ -21477,19 +21466,7 @@ namespace ts {
                     }
                     else return false;
                 });
-                let result: Type[] = [];
-                if (type.flags & TypeFlags.Union) {
-                    result = (<UnionType>type).types.filter((_t, index) => {
-                        return markArray[index];
-                    });
-                }
-                else {
-                    if (markArray[0]) {
-                        result = [type];
-                    }
-                    // no need to handle else branch, getUnionType would return never if input is [], which is expected.
-                }
-                return getUnionType(result);
+                return filterType(type, (_t, i) => markArray[i]);
             }
 
             function narrowTypeByDiscriminant(type: Type, access: AccessExpression, narrowTypeCb: (t: Type) => Type): Type {
@@ -21909,10 +21886,7 @@ namespace ts {
                                 return false;
                             }
                         });
-                        const result = (<UnionType>type).types.filter((_t, index) => {
-                            return markArray[index];
-                        });
-                        return getUnionType(result);
+                        return filterType(type, (_t, i) => markArray[i]);
                     }
                     return type;
                 }
@@ -22110,10 +22084,7 @@ namespace ts {
                         return false;
                     }
                 });
-                const result = (<UnionType>type).types.filter((_t, index) => {
-                    return markArray[index];
-                });
-                return getUnionType(result);
+                return filterType(type, (_t, i) => markArray[i]);
             }
 
             function isMatchingConstructorReference(expr: Expression) {
