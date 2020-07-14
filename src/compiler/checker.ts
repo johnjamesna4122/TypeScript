@@ -21452,7 +21452,7 @@ namespace ts {
                     //         if(resolved.stringIndexInfo || resolved.numberIndexInfo){
                     //             return false;
                     //         }
-                    //     }            
+                    //     }
                     // }
 
                     return true;
