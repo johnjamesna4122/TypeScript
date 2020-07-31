@@ -21459,6 +21459,7 @@ namespace ts {
                 }
 
                 // if root has undefiend|null, this need deal with differently.
+                // In this case, propertyTypeArray must have undefined/null, and in most cases, it would become a union type, But not really.
                 const computedTypeIsNullable = maybeTypeOfKind(computedType, TypeFlags.Nullable);
 
                 return isTypeArrayDiscriminant(propertyTypeArray, computedTypeIsNullable);
@@ -21681,31 +21682,21 @@ namespace ts {
                 // If expression is a.b["c"].d(), return ["b","c","d"]
                 // NOTE: If element expression is not known in compile progress like a.b[f()].d, the result would be undefined
                 // //NOTE: this function need improvement, ElementAccessExpression argument might could be known in compile time, like "1"+"2", we should check "12" in the path, but how to get the value?
-                function getPropertyPathsOfAccessExpression(expressionOri: Expression, depth: number): __String[] | undefined {
-                    const properties = [];
-                    let expr: Expression = expressionOri;
-                    let propName: __String;
-                    while ((expr.kind === SyntaxKind.PropertyAccessExpression || expr.kind === SyntaxKind.ElementAccessExpression) && properties.length !== depth) {
-                        if (expr.kind === SyntaxKind.PropertyAccessExpression) {
-                            propName = (<PropertyAccessExpression>expr).name.escapedText;
-                        }
-                        else {
-                            const argExpression = (<ElementAccessExpression>expr).argumentExpression;
-                            if (isLiteralExpression(argExpression)) {
-                                propName = escapeLeadingUnderscores(argExpression.text);
-                            }
-                            else {
-                                return undefined;
-                            }
-                        }
-                        properties.unshift(propName);
-                        expr = (<PropertyAccessExpression>expr).expression;
+                function tryGetPropertyPathsOfReferenceFromExpression(expressionOri: Expression, ref?: Node) {
+                    const depth = getTypeDepthIfMatch(expressionOri, ref);
+                    if (depth && depth < 0) {
+                        return undefined;
                     }
-                    return properties;
-                }
+                    const propertyPaths = getPropertyPathsOfAccessExpressionWithDepthLimit(expressionOri, depth);
+                    return propertyPaths;
 
-                function tryGetPropertyPathsOfReferenceFromExpression(expressionOri: Expression, _ref?: Node) {
-                    function getTypeDepthIfMatch(expression: Expression, ref: Node): number {
+                    /**
+                     * @returns return undefined means ref is not provided, return -1 means not matched
+                     */
+                    function getTypeDepthIfMatch(expression: Expression, ref?: Node): number | undefined {
+                        if (!ref) {
+                            return undefined;
+                        }
                         let result = 0;
                         let expr = expression;
                         if (isMatchingReference(ref, expr)) {
@@ -21721,16 +21712,22 @@ namespace ts {
                         return -1;
                     }
 
-                    const depth = getTypeDepthIfMatch(expressionOri, reference);
-                    if (depth < 0) {
-                        return undefined;
+                    function getPropertyPathsOfAccessExpressionWithDepthLimit(expressionOri: Expression, depth?: number): __String[] | undefined {
+                        const properties = [];
+                        let expr: Expression = expressionOri;
+                        while (isAccessExpression(expr) && (!depth || properties.length !== depth)) {
+                            const propName = getAccessedPropertyName(expr);
+                            if (!propName) {
+                                return undefined;
+                            }
+                            properties.unshift(propName);
+                            expr = expr.expression;
+                        }
+                        return properties;
                     }
-                    const propertyPaths = getPropertyPathsOfAccessExpression(expressionOri, depth);
-                    return propertyPaths;
                 }
 
-
-                function getPropertyTypeFromReferenceAccordingToPath(nonUntionType: Type, paths: __String[], isCallExpression: boolean): Type | undefined {
+                function getPropertyTypeFromTypeAccordingToPath(nonUntionType: Type, paths: __String[], isCallExpression: boolean): Type | undefined {
                     let result: Type | undefined;
                     const pathsLength = paths.length;
 
@@ -21796,7 +21793,7 @@ namespace ts {
                     return result;
                 }
 
-                function getExpressionWithOutOptionalChain(e: Expression) {
+                function getExpressionWithoutOptionalChain(e: Expression) {
                     let i = 0;
                     let delta = 0;
                     let expr = e;
@@ -21819,7 +21816,7 @@ namespace ts {
                     if (quickReturn){
                         return undefined;
                     }
-                    expressionWithOutKeyword = getExpressionWithOutOptionalChain(expressionWithOutKeyword);
+                    expressionWithOutKeyword = getExpressionWithoutOptionalChain(expressionWithOutKeyword);
                 }
 
                 let callExpressionFlag = false;
@@ -21842,21 +21839,21 @@ namespace ts {
 
                 let propertyTypeArray: (Type | undefined)[] = [];
                 if (type.flags & TypeFlags.Union) {
-                    propertyTypeArray = (<UnionType>type).types.map(type => getPropertyTypeFromReferenceAccordingToPath(type, propertyPaths, callExpressionFlag));
+                    propertyTypeArray = (<UnionType>type).types.map(type => getPropertyTypeFromTypeAccordingToPath(type, propertyPaths, callExpressionFlag));
                 }
                 else {
-                    propertyTypeArray = [getPropertyTypeFromReferenceAccordingToPath(type, propertyPaths, callExpressionFlag)];
+                    propertyTypeArray = [getPropertyTypeFromTypeAccordingToPath(type, propertyPaths, callExpressionFlag)];
                 }
 
                 // if propertyTypeArray has unedfined value, it means sometype in the union type could not reach the path.
                 // This should be an error which is not handled by this function, and we just not continue filter tyopes.
-                if (assert(propertyTypeArray)) {
+                if (isArrayNotAnyUndefinedElement(propertyTypeArray)) {
                     return propertyTypeArray;
                 }
                 else {
                     return undefined;
                 }
-                function assert(propertyTypeArray: (Type | undefined)[]): propertyTypeArray is Type[] {
+                function isArrayNotAnyUndefinedElement(propertyTypeArray: (Type | undefined)[]): propertyTypeArray is Type[] {
                     return !propertyTypeArray.some(type => !type);
                 }
             }
@@ -21873,7 +21870,7 @@ namespace ts {
                 if (!isMatchingReference(reference, target)) {
                     if (type.flags & TypeFlags.Union) {
                         let propertyTypeArray: Type[] | undefined;
-                        let notNullOrUndefinedFilter = false;  // the aim of this filter is type has 'undefined',filter it out from result.
+                        let notNullOrUndefinedFilter = false;
                         // ~undefined means other values except undefiend. boolean, bigint....
                         if ((assumeTrue && literal.text !== "undefined") || (!assumeTrue && literal.text === "undefined")) {
                             // !== undefined, === ~undefined
