@@ -23,6 +23,7 @@ namespace ts {
         /* @internal */ extendedDiagnostics?: boolean;
         /* @internal */ locale?: string;
         /* @internal */ generateCpuProfile?: string;
+        /* @internal */ generateTrace?: string;
 
         [option: string]: CompilerOptionsValue | undefined;
     }
@@ -63,7 +64,7 @@ namespace ts {
     }
 
     function getOrCreateValueMapFromConfigFileMap<T>(configFileMap: ESMap<ResolvedConfigFilePath, ESMap<string, T>>, resolved: ResolvedConfigFilePath): ESMap<string, T> {
-        return getOrCreateValueFromConfigFileMap<ESMap<string, T>>(configFileMap, resolved, createMap);
+        return getOrCreateValueFromConfigFileMap<ESMap<string, T>>(configFileMap, resolved, () => new Map());
     }
 
     function newer(date1: Date, date2: Date): Date {
@@ -439,10 +440,12 @@ namespace ts {
 
         // Clear all to ResolvedConfigFilePaths cache to start fresh
         state.resolvedConfigFilePaths.clear();
-        const currentProjects = arrayToSet(
-            getBuildOrderFromAnyBuildOrder(buildOrder),
-            resolved => toResolvedConfigFilePath(state, resolved)
-        ) as ESMap<ResolvedConfigFilePath, true>;
+
+        // TODO(rbuckton): Should be a `Set`, but that requires changing the code below that uses `mutateMapSkippingNewValues`
+        const currentProjects = new Map(
+            getBuildOrderFromAnyBuildOrder(buildOrder).map(
+                resolved => [toResolvedConfigFilePath(state, resolved), true as true])
+        );
 
         const noopOnDelete = { onDeleteValue: noop };
         // Config file cache
@@ -1796,7 +1799,7 @@ namespace ts {
         if (!state.watch) return;
         updateWatchingWildcardDirectories(
             getOrCreateValueMapFromConfigFileMap(state.allWatchedWildcardDirectories, resolvedPath),
-            createMapFromTemplate(parsed.configFileSpecs!.wildcardDirectories),
+            new Map(getEntries(parsed.configFileSpecs!.wildcardDirectories)),
             (dir, flags) => state.watchDirectory(
                 state.hostWithWatch,
                 dir,

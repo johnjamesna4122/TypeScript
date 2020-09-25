@@ -62,21 +62,13 @@ Output::
 [7m2[0m export const ADMIN = MetadataAccessor.create<boolean>('1');
 [7m [0m [91m             ~~~~~[0m
 
-
 /a/lib/lib.d.ts
-
 /user/username/projects/myProject/pkg1/dist/types.d.ts
-
 /user/username/projects/myProject/pkg1/dist/index.d.ts
-
 /user/username/projects/myproject/pkg2/dist/types.d.ts
-
 /user/username/projects/myproject/pkg2/dist/index.d.ts
-
 /user/username/projects/myproject/pkg3/src/keys.ts
-
 /user/username/projects/myproject/pkg3/src/index.ts
-
 
 Found 1 error.
 
@@ -119,7 +111,7 @@ var __createBinding = (this && this.__createBinding) || (Object.create ? (functi
     o[k2] = m[k];
 }));
 var __exportStar = (this && this.__exportStar) || function(m, exports) {
-    for (var p in m) if (p !== "default" && !exports.hasOwnProperty(p)) __createBinding(exports, m, p);
+    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 __exportStar(require("./keys"), exports);

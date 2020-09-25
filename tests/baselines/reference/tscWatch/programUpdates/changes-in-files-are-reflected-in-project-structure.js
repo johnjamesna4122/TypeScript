@@ -27,7 +27,6 @@ Output::
 >> Screen clear
 [[90m12:00:19 AM[0m] Starting compilation in watch mode...
 
-
 [[90m12:00:24 AM[0m] Found 0 errors. Watching for file changes.
 
 
@@ -75,7 +74,7 @@ var __createBinding = (this && this.__createBinding) || (Object.create ? (functi
     o[k2] = m[k];
 }));
 var __exportStar = (this && this.__exportStar) || function(m, exports) {
-    for (var p in m) if (p !== "default" && !exports.hasOwnProperty(p)) __createBinding(exports, m, p);
+    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 exports.__esModule = true;
 __exportStar(require("./f2"), exports);
@@ -92,7 +91,6 @@ export * from "../c/f3"
 Output::
 >> Screen clear
 [[90m12:00:27 AM[0m] File change detected. Starting incremental compilation...
-
 
 [[90m12:00:36 AM[0m] Found 0 errors. Watching for file changes.
 
@@ -137,7 +135,7 @@ var __createBinding = (this && this.__createBinding) || (Object.create ? (functi
     o[k2] = m[k];
 }));
 var __exportStar = (this && this.__exportStar) || function(m, exports) {
-    for (var p in m) if (p !== "default" && !exports.hasOwnProperty(p)) __createBinding(exports, m, p);
+    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 exports.__esModule = true;
 __exportStar(require("../c/f3"), exports);

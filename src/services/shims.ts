@@ -145,9 +145,9 @@ namespace ts {
         getCompilerOptionsDiagnostics(): string;
 
         getSyntacticClassifications(fileName: string, start: number, length: number): string;
-        getSemanticClassifications(fileName: string, start: number, length: number): string;
+        getSemanticClassifications(fileName: string, start: number, length: number, format?: SemanticClassificationFormat): string;
         getEncodedSyntacticClassifications(fileName: string, start: number, length: number): string;
-        getEncodedSemanticClassifications(fileName: string, start: number, length: number): string;
+        getEncodedSemanticClassifications(fileName: string, start: number, length: number, format?: SemanticClassificationFormat): string;
 
         getCompletionsAtPosition(fileName: string, position: number, preferences: UserPreferences | undefined): string;
         getCompletionEntryDetails(fileName: string, position: number, entryName: string, formatOptions: string/*Services.FormatCodeOptions*/ | undefined, source: string | undefined, preferences: UserPreferences | undefined): string;
@@ -277,6 +277,11 @@ namespace ts {
 
         getEmitOutput(fileName: string): string;
         getEmitOutputObject(fileName: string): EmitOutput;
+
+        toggleLineComment(fileName: string, textChange: TextRange): string;
+        toggleMultilineComment(fileName: string, textChange: TextRange): string;
+        commentSelection(fileName: string, textChange: TextRange): string;
+        uncommentSelection(fileName: string, textChange: TextRange): string;
     }
 
     export interface ClassifierShim extends Shim {
@@ -1067,6 +1072,34 @@ namespace ts {
                 /*returnJson*/ false,
                 () => this.languageService.getEmitOutput(fileName),
                 this.logPerformance) as EmitOutput;
+        }
+
+        public toggleLineComment(fileName: string, textRange: TextRange): string {
+            return this.forwardJSONCall(
+                `toggleLineComment('${fileName}', '${JSON.stringify(textRange)}')`,
+                () => this.languageService.toggleLineComment(fileName, textRange)
+            );
+        }
+
+        public toggleMultilineComment(fileName: string, textRange: TextRange): string {
+            return this.forwardJSONCall(
+                `toggleMultilineComment('${fileName}', '${JSON.stringify(textRange)}')`,
+                () => this.languageService.toggleMultilineComment(fileName, textRange)
+            );
+        }
+
+        public commentSelection(fileName: string, textRange: TextRange): string {
+            return this.forwardJSONCall(
+                `commentSelection('${fileName}', '${JSON.stringify(textRange)}')`,
+                () => this.languageService.commentSelection(fileName, textRange)
+            );
+        }
+
+        public uncommentSelection(fileName: string, textRange: TextRange): string {
+            return this.forwardJSONCall(
+                `uncommentSelection('${fileName}', '${JSON.stringify(textRange)}')`,
+                () => this.languageService.uncommentSelection(fileName, textRange)
+            );
         }
     }
 
