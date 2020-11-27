@@ -19157,6 +19157,12 @@ namespace ts {
                 && ((target.flags & (TypeFlags.Number | TypeFlags.String | TypeFlags.Boolean)) !== 0);
         }
 
+        // `nullable == SomeType|nullable` should be true
+        function isNullableComparableUnderDoubleEquals(source: Type, target: Type): boolean {
+            return !!(source.flags & TypeFlags.Nullable) && maybeTypeOfKind(target, TypeFlags.Nullable)
+                || !!(target.flags & TypeFlags.Nullable) && maybeTypeOfKind(source, TypeFlags.Nullable);
+        }
+
         /**
          * Return true if type was inferred from an object literal, written as an object type literal, or is the shape of a module
          * with no call or construct signatures.
@@ -22076,10 +22082,12 @@ namespace ts {
                     return true;
                 }
 
-                // if root has undefiend|null, this need deal with differently.
-                // In this case, propertyTypeArray must have undefined/null, and in most cases, it would become a union type, But not really.
+                // here are all possiable situations:
+                // 1. nullable | nonNullable1
+                // 2. nullable | nonNullable1 | nonNullable2...
+                // 3. nonNullable1 | nonNullable2...
+                // if root contains nullable type, for situation 1, we do not need to narrow.
                 const computedTypeIsNullable = maybeTypeOfKind(computedType, TypeFlags.Nullable);
-
                 return isTypeArrayDiscriminant(propertyTypeArray, computedTypeIsNullable);
             }
 
@@ -22264,7 +22272,7 @@ namespace ts {
                 }
                 if (assumeTrue) {
                     const filterFn: (t: Type) => boolean = operator === SyntaxKind.EqualsEqualsToken ?
-                        (t => areTypesComparable(t, valueType) || isCoercibleUnderDoubleEquals(t, valueType)) :
+                        (t => areTypesComparable(t, valueType) || isCoercibleUnderDoubleEquals(t, valueType) || isNullableComparableUnderDoubleEquals(t, valueType)) :
                         t => areTypesComparable(t, valueType);
                     return replacePrimitivesWithLiterals(filterType(type, filterFn), valueType);
                 }
@@ -22287,6 +22295,7 @@ namespace ts {
             }
 
             /**
+             * @param type Assume this should be just the type of 'reference'
              * @param optionalChainSlice If this is true, only match the part before first optional chain. if expression is a.b.c?.d.e, only take a.b.c to get property.
              */
             function getPropertyTypesFromTypeAccordingToExpression(type: Type, expressionWithOutKeyword: Expression, optionalChainSlice = false): Type[] | undefined {
@@ -22358,20 +22367,15 @@ namespace ts {
                     // If it is primitive type, it could not have any paths.
                     // If paths is empty array, it is just the type, if not, just return.
                     if (nonUntionType.flags & TypeFlags.Primitive) {
-                        // Why undefined is special:
-                        // 1. optional chain
-                        // 2. undefined is one keyword of typeof value
-                        if (nonUntionType.flags & TypeFlags.Undefined) {   // maybe there should be === rather than &
+                        if (nonUntionType.flags & TypeFlags.Nullable) {
                             return nonUntionType;
                         }
-                        if (nonUntionType.flags & TypeFlags.Null) {
-                            return nonUntionType;
-                        }
-                        return result;
+                        return undefined;
                     }
                     let curType = nonUntionType;
                     for (let i = 0; i < pathsLength; i++) {
                         const path = paths[i];
+                        // here could be improved: in strict mode, only when through OptionalChain could we remove nullable type, otherwise just return undefined
                         const nonNullableTypeIfStrict = getNonNullableTypeIfNeeded(curType);
                         let type: Type;
                         if(nonNullableTypeIfStrict.flags & TypeFlags.UnionOrIntersection){
@@ -22506,11 +22510,11 @@ namespace ts {
                         if (!propertyTypeArray) {
                             return type;
                         }
+                        if (notNullOrUndefinedFilter) {
+                            facts |= TypeFacts.NEUndefinedOrNull;
+                        }
                         const markArray = propertyTypeArray.map(propertyType => {
                             const propertyTypeFacts = getTypeFacts(propertyType);
-                            if (notNullOrUndefinedFilter) {
-                                facts |= TypeFacts.NEUndefinedOrNull;
-                            }
                             if ((propertyTypeFacts & facts) === facts) {
                                 return true;
                             }
@@ -22700,15 +22704,9 @@ namespace ts {
                 if (!propertyTypeArray) {
                     return type;                    // return type;
                 }
+                const secondFacts = notNullOrUndefinedFilter ? TypeFacts.NEUndefinedOrNull : TypeFacts.None;
                 const markArray = propertyTypeArray.map(propertyType => {
                     const propertyTypeFacts = getTypeFacts(propertyType);
-                    let secondFacts: TypeFacts;
-                    if (notNullOrUndefinedFilter) {
-                        secondFacts = TypeFacts.NEUndefinedOrNull;
-                    }
-                    else {
-                        secondFacts = TypeFacts.None;        // The aim is no filter.
-                    }
                     if ((propertyTypeFacts & facts) && (propertyTypeFacts & secondFacts) === secondFacts) {
                         return true;
                     }
