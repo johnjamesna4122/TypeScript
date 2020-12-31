@@ -29,6 +29,10 @@ type Z = { type1: C, z: string }
 >type1 : C
 >z : string
 
+type W = { type1: undefined }
+>W : W
+>type1 : undefined
+
 function f32(x: X | Y) {
 >f32 : (x: X | Y) => void
 >x : X | Y
@@ -121,6 +125,26 @@ function f34(x: X | Y) {
     }
 }
 
+function f35(x: X | W) {
+>f35 : (x: X | W) => void
+>x : X | W
+
+    if (x.type1?.type2 === "a") {
+>x.type1?.type2 === "a" : boolean
+>x.type1?.type2 : "a" | undefined
+>x.type1 : A | undefined
+>x : X | W
+>type1 : A | undefined
+>type2 : "a" | undefined
+>"a" : "a"
+
+        x.x
+>x.x : string
+>x : X
+>x : string
+    }
+}
+
 type S = { sub: { type0: X }, s: string }
 >S : S
 >sub : { type0: X; }
@@ -133,8 +157,8 @@ type T = { sub: { type0: Y }, t: string }
 >type0 : Y
 >t : string
 
-function f35(s: S | T) {
->f35 : (s: S | T) => void
+function f36(s: S | T) {
+>f36 : (s: S | T) => void
 >s : S | T
 
     if (s.sub.type0.type1.type2 === "a") {

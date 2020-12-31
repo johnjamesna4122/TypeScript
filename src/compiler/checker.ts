@@ -22330,6 +22330,9 @@ namespace ts {
                 if (!propertyTypeArray) {
                     return false;
                 }
+                if (propertyTypeArray.some(t => t.reason === DeepPropertyUnreachableReason.OnlyNeverOnPath || t.reason === DeepPropertyUnreachableReason.OnlyNullableOnPath)) {
+                    return true;
+                }
 
                 if (!(computedType.flags & TypeFlags.Union)) {
                     // Whether we fall back to the declared type depends entirely on how
@@ -22401,7 +22404,7 @@ namespace ts {
                 // 3. nonNullable1 | nonNullable2...
                 // if root contains nullable type, for situation 1, we do not need to narrow.
                 const computedTypeIsNullable = maybeTypeOfKind(computedType, TypeFlags.Nullable);
-                return isTypeArrayDiscriminant(propertyTypeArray, computedTypeIsNullable);
+                return isTypeArrayDiscriminant(propertyTypeArray.map(t => t.finalType!), computedTypeIsNullable);
             }
 
             function narrowTypeByDiscriminantNew(type: Type, access: AccessExpression, narrowTypeCb: (t: Type) => Type): Type {
@@ -22409,19 +22412,20 @@ namespace ts {
                 if (!propertyTypeArray) {
                     return type;
                 }
+                const reachableFinalType = (propertyTypeArray.filter(t => t.finalType !== undefined).map(t=>t.finalType) as Type[]);
                 const subtypes: Type[] = [];
-                forEach(propertyTypeArray, propType => {
+                forEach(reachableFinalType, propType => {
                     forEachType(propType, t => { subtypes.push(t); });
                 });
                 const bigUnion = getUnionType(subtypes);
                 const narrowedPropType = narrowTypeCb(bigUnion);
-                const markArray = propertyTypeArray.map(propertyType => {
-                    if (isTypeComparableTo(propertyType, narrowedPropType)) {
-                        return true;
+                const markSet = new Set<TypeId>();
+                propertyTypeArray.forEach(propertyType => {
+                    if (propertyType.finalType && !(propertyType.finalType.flags & TypeFlags.Never) && isTypeComparableTo(propertyType.finalType, narrowedPropType)) {
+                        markSet.add(propertyType.tyepeId);
                     }
-                    else return false;
                 });
-                return filterType(type, (_t, i) => markArray[i]);
+                return filterType(type, (t) => markSet.has(t.id));
             }
 
             function narrowTypeByDiscriminant(type: Type, access: AccessExpression, narrowTypeCb: (t: Type) => Type): Type {
@@ -22607,11 +22611,27 @@ namespace ts {
                 return false;
             }
 
+            const enum DeepPropertyUnreachableReason {
+                Error2339,
+                OnlyNeverOnPath,
+                OnlyNullableOnPath
+            }
+
+            interface NarrowDeepPropertyInfo {
+                // Direct constituent of one union type.
+                tyepeId: TypeId;
+                // Get the type according to path from direct constituent. `undefined` means impossiable to reach type according to path.
+                finalType: Type | undefined;
+                // the reason why `finalType` is not reachable.
+                // `undefiend` only when finalType is not `undefined` (should it be?)
+                reason?: DeepPropertyUnreachableReason;
+            }
+
             /**
              * @param type Assume this should be just the type of 'reference'
              * @param optionalChainSlice If this is true, only match the part before first optional chain. if expression is a.b.c?.d.e, only take a.b.c to get property.
              */
-            function getPropertyTypesFromTypeAccordingToExpression(type: Type, expressionWithOutKeyword: Expression, optionalChainSlice = false): Type[] | undefined {
+            function getPropertyTypesFromTypeAccordingToExpression(type: Type, expressionWithOutKeyword: Expression, optionalChainSlice = false): NarrowDeepPropertyInfo[] | undefined {
                 // This function is designed to be used in the first steps in follow steps:
                 // 1. get all properties' type of the origional types according to expression path
                 //   - In some case, should not narrow type according to the whole path, for example:
@@ -22669,46 +22689,51 @@ namespace ts {
                     }
                 }
 
-                function getPropertyTypeFromTypeAccordingToPath(nonUntionType: Type, paths: __String[], isCallExpression: boolean): Type | undefined {
-                    let result: Type | undefined;
+                function getPropertyTypeFromTypeAccordingToPath(nonUntionType: Type, paths: __String[], isCallExpression: boolean): NarrowDeepPropertyInfo {
+                    const result: NarrowDeepPropertyInfo = {
+                        tyepeId: nonUntionType.id,
+                        finalType: undefined
+                    };
+
                     const pathsLength = paths.length;
 
                     if (paths.length === 0) {
-                        return nonUntionType;
+                        result.finalType = nonUntionType;
+                        return result;
                     }
 
                     // If it is primitive type, it could not have any paths.
                     // If paths is empty array, it is just the type, if not, just return.
                     if (nonUntionType.flags & TypeFlags.Primitive) {
-                        if (nonUntionType.flags & TypeFlags.Nullable) {
-                            return nonUntionType;
-                        }
-                        return undefined;
+                        result.reason = getReasonOfUnreachableType(nonUntionType);
+                        return result;
                     }
+
                     let curType = nonUntionType;
                     for (let i = 0; i < pathsLength; i++) {
                         const path = paths[i];
                         // here could be improved: in strict mode, only when through OptionalChain could we remove nullable type, otherwise just return undefined
                         const nonNullableTypeIfStrict = getNonNullableTypeIfNeeded(curType);
                         let type: Type;
-                        if(nonNullableTypeIfStrict.flags & TypeFlags.UnionOrIntersection){
+                        if (nonNullableTypeIfStrict.flags & TypeFlags.UnionOrIntersection) {
                             // although getTypeOfPropertyOfType use getPropertyOfUnionOrIntersectionType, but in getReducedApparentType
                             // intersection type that contains mutually exclusive discriminant properties returns never.
                             const prop = getPropertyOfUnionOrIntersectionType(<UnionOrIntersectionType>nonNullableTypeIfStrict, path);
                             type = prop ? getTypeOfSymbol(prop) : unknownType; // unknownType is to keep coninstance with the return value of getTypeOfPropertyOrIndexSignature
                         }
-                        else{
+                        else {
                             type = getTypeOfPropertyOrIndexSignature(nonNullableTypeIfStrict, path);
                         }
 
                         // if it is not accessable to all types, break;
                         if (type === unknownType) {
+                            result.reason = getReasonOfUnreachableType(curType);
                             break;
                         }
 
                         // The last one is what we need, just return it.
                         if (i === pathsLength - 1) {
-                            result = type;
+                            result.finalType = type;
                             break;
                         }
                         curType = type;
@@ -22717,17 +22742,26 @@ namespace ts {
                     // here could be improved, now, we access all return type for the signature, but it could use parameter to get reduced return types.
                     if (isCallExpression) {
                         if (!result) {
-                            return;
+                            return result;
                         }
-                        if (result.flags & TypeFlags.Object) {
-                            const returnTypes = (<ObjectType>result).callSignatures?.map(getReturnTypeOfSignature);
+                        if (result.finalType && result.finalType.flags & TypeFlags.Object) {
+                            const returnTypes = (<ObjectType>result.finalType).callSignatures?.map(getReturnTypeOfSignature);
                             // In which condition could returnTypes be undefined?
                             if (returnTypes) {
-                                result = getUnionType(returnTypes);
+                                result.finalType = getUnionType(returnTypes);
                             }
                         }
                     }
+
                     return result;
+
+                    function getReasonOfUnreachableType(t: Type) {
+                        return isTypeOnlyNullable(t) ? DeepPropertyUnreachableReason.OnlyNullableOnPath :
+                            (t.flags & TypeFlags.Never) ? DeepPropertyUnreachableReason.OnlyNeverOnPath : DeepPropertyUnreachableReason.Error2339;
+                    }
+                    function isTypeOnlyNullable(t: Type) {
+                        return !!(t.flags & TypeFlags.Nullable) && !(t.flags & (TypeFlags.Primitive ^ TypeFlags.Nullable));
+                    }
                 }
 
                 function getExpressionWithoutOptionalChain(e: Expression) {
@@ -22750,7 +22784,7 @@ namespace ts {
                 if (optionalChainSlice) {
                     // For temp, there is no need to real return non-optional part, just consider it as a false condition to optimise.
                     const quickReturn = true;
-                    if (quickReturn){
+                    if (quickReturn) {
                         return undefined;
                     }
                     expressionWithOutKeyword = getExpressionWithoutOptionalChain(expressionWithOutKeyword);
@@ -22770,11 +22804,19 @@ namespace ts {
                 }
                 const propertyPaths = tryGetPropertyPathsOfReferenceFromExpression(nonCallExpressionWithOutKeyword, reference);
                 if (!propertyPaths) {
-                    // Not expected here should return. But for the situation not considered, I add this.
                     return undefined;
                 }
 
-                let propertyTypeArray: (Type | undefined)[] = [];
+                // In most case, if sometype in the union type could not reach the path,
+                // it should be an error which is not handled by this function, and we just not continue filter types.
+                // But, we must consider some edge cases, like:
+                // 1. type A is { a: undefined }.
+                // 2. type B is { a: never }.
+                // Now we have `type C = { a: {innerType: 1} }`
+                // for case 1, create `type X = A|C`, it should be filtered through optional chain, and not cause any error although it has any inner type. Like `root.a?.innerType` is valid.
+                // for case 2, it is similar, and we do not even need optional chain. Like `root.a.innerType`
+
+                let propertyTypeArray: NarrowDeepPropertyInfo[] = [];
                 if (type.flags & TypeFlags.Union) {
                     propertyTypeArray = (<UnionType>type).types.map(type => getPropertyTypeFromTypeAccordingToPath(type, propertyPaths, callExpressionFlag));
                 }
@@ -22782,16 +22824,12 @@ namespace ts {
                     propertyTypeArray = [getPropertyTypeFromTypeAccordingToPath(type, propertyPaths, callExpressionFlag)];
                 }
 
-                // if propertyTypeArray has unedfined value, it means sometype in the union type could not reach the path.
-                // This should be an error which is not handled by this function, and we just not continue filter tyopes.
-                if (isArrayNotAnyUndefinedElement(propertyTypeArray)) {
-                    return propertyTypeArray;
-                }
-                else {
+                Debug.assert(propertyTypeArray.every(i => (i.finalType !== undefined && i.reason === undefined) || (i.finalType === undefined && i.reason !== undefined))); // one and only one is `undefined`.
+
+                if (some(propertyTypeArray, t => t.reason === DeepPropertyUnreachableReason.Error2339)) {
                     return undefined;
-                }
-                function isArrayNotAnyUndefinedElement(propertyTypeArray: (Type | undefined)[]): propertyTypeArray is Type[] {
-                    return !propertyTypeArray.some(type => !type);
+                } else {
+                    return propertyTypeArray;
                 }
             }
 
@@ -22806,7 +22844,7 @@ namespace ts {
                 const target = getReferenceCandidate(typeOfExpr.expression);
                 if (!isMatchingReference(reference, target)) {
                     if (type.flags & TypeFlags.Union) {
-                        let propertyTypeArray: Type[] | undefined;
+                        let propertyTypeArray: NarrowDeepPropertyInfo[] | undefined;
                         let notNullOrUndefinedFilter = false;
                         // ~undefined means other values except undefiend. boolean, bigint....
                         if ((assumeTrue && literal.text !== "undefined") || (!assumeTrue && literal.text === "undefined")) {
@@ -22826,16 +22864,16 @@ namespace ts {
                         if (notNullOrUndefinedFilter) {
                             facts |= TypeFacts.NEUndefinedOrNull;
                         }
-                        const markArray = propertyTypeArray.map(propertyType => {
-                            const propertyTypeFacts = getTypeFacts(propertyType);
+                        const markSet = new Set<TypeId>();
+
+                        propertyTypeArray.forEach(propertyType => {
+                            const reachableFinalType = (propertyType.finalType) as Type;
+                            const propertyTypeFacts = getTypeFacts(reachableFinalType);
                             if ((propertyTypeFacts & facts) === facts) {
-                                return true;
-                            }
-                            else {
-                                return false;
+                                markSet.add(propertyType.tyepeId);
                             }
                         });
-                        return filterType(type, (_t, i) => markArray[i]);
+                        return filterType(type, (t) => markSet.has(t.id));
                     }
                     return type;
                 }
@@ -22999,7 +23037,7 @@ namespace ts {
                     }
                     return getTypeWithFacts(mapType(type, narrowUnionMemberByTypeof(impliedType)), switchFacts);
                 }
-                let propertyTypeArray: Type[] | undefined;
+                let propertyTypeArray: NarrowDeepPropertyInfo[] | undefined;
                 let notNullOrUndefinedFilter = false;
                 const isExpressionContainOptionalChain = isAccessExpressionContainOptionalChain(expr);
                 const facts = switchFacts;
@@ -23018,16 +23056,16 @@ namespace ts {
                     return type;                    // return type;
                 }
                 const secondFacts = notNullOrUndefinedFilter ? TypeFacts.NEUndefinedOrNull : TypeFacts.None;
-                const markArray = propertyTypeArray.map(propertyType => {
-                    const propertyTypeFacts = getTypeFacts(propertyType);
+                const markSet = new Set<TypeId>();
+
+                propertyTypeArray.forEach(propertyType => {
+                    const reachableFinalType = (propertyType.finalType) as Type;
+                    const propertyTypeFacts = getTypeFacts(reachableFinalType);
                     if ((propertyTypeFacts & facts) && (propertyTypeFacts & secondFacts) === secondFacts) {
-                        return true;
-                    }
-                    else {
-                        return false;
+                        markSet.add(propertyType.tyepeId);
                     }
                 });
-                return filterType(type, (_t, i) => markArray[i]);
+                return filterType(type, (t) => markSet.has(t.id));
             }
 
             function isMatchingConstructorReference(expr: Expression) {

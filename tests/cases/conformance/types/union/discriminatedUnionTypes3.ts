@@ -8,6 +8,7 @@ type C = { type2: "c", b: number | string }
 type X = { type1: A, x: string }
 type Y = { type1: B, y: string }
 type Z = { type1: C, z: string }
+type W = { type1: undefined }
 
 function f32(x: X | Y) {
     switch (x.type1.type2) {
@@ -39,10 +40,16 @@ function f34(x: X | Y) {
     }
 }
 
+function f35(x: X | W) {
+    if (x.type1?.type2 === "a") {
+        x.x
+    }
+}
+
 type S = { sub: { type0: X }, s: string }
 type T = { sub: { type0: Y }, t: string }
 
-function f35(s: S | T) {
+function f36(s: S | T) {
     if (s.sub.type0.type1.type2 === "a") {
         s.s // typeof s is S
         s.sub.type0.x // type of s.sub.type is X
