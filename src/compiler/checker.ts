@@ -22451,8 +22451,8 @@ namespace ts {
                 if (strictNullChecks && assumeTrue && optionalChainContainsReference(expr, reference)) {
                     type = getTypeWithFacts(type, TypeFacts.NEUndefinedOrNull);
                 }
-                if (isMatchingReferenceDiscriminant(expr, type)) {
-                    return narrowTypeByDiscriminant(type, <AccessExpression>expr, t => getTypeWithFacts(t, assumeTrue ? TypeFacts.Truthy : TypeFacts.Falsy));
+                if (isMatchingReferenceDiscriminantNew(expr, type)) {
+                    return narrowTypeByDiscriminantNew(type, <AccessExpression>expr, t => getTypeWithFacts(t, assumeTrue ? TypeFacts.Truthy : TypeFacts.Falsy));
                 }
                 return type;
             }
@@ -22867,7 +22867,8 @@ namespace ts {
                         const markSet = new Set<TypeId>();
 
                         propertyTypeArray.forEach(propertyType => {
-                            const reachableFinalType = (propertyType.finalType) as Type;
+                            if (!propertyType.finalType) { return; }
+                            const reachableFinalType = propertyType.finalType;
                             const propertyTypeFacts = getTypeFacts(reachableFinalType);
                             if ((propertyTypeFacts & facts) === facts) {
                                 markSet.add(propertyType.tyepeId);
@@ -23059,7 +23060,8 @@ namespace ts {
                 const markSet = new Set<TypeId>();
 
                 propertyTypeArray.forEach(propertyType => {
-                    const reachableFinalType = (propertyType.finalType) as Type;
+                    if (!propertyType.finalType) { return; }
+                    const reachableFinalType = propertyType.finalType;
                     const propertyTypeFacts = getTypeFacts(reachableFinalType);
                     if ((propertyTypeFacts & facts) && (propertyTypeFacts & secondFacts) === secondFacts) {
                         markSet.add(propertyType.tyepeId);
@@ -23253,8 +23255,8 @@ namespace ts {
                 if (isMatchingReference(reference, expr)) {
                     return getTypeWithFacts(type, assumePresent ? TypeFacts.NEUndefinedOrNull : TypeFacts.EQUndefinedOrNull);
                 }
-                if (isMatchingReferenceDiscriminant(expr, type)) {
-                    return narrowTypeByDiscriminant(type, <AccessExpression>expr, t => getTypeWithFacts(t, assumePresent ? TypeFacts.NEUndefinedOrNull : TypeFacts.EQUndefinedOrNull));
+                if (isMatchingReferenceDiscriminantNew(expr, type)) {
+                    return narrowTypeByDiscriminantNew(type, <AccessExpression>expr, t => getTypeWithFacts(t, assumePresent ? TypeFacts.NEUndefinedOrNull : TypeFacts.EQUndefinedOrNull));
                 }
                 return type;
             }
