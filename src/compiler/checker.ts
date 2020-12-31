@@ -23224,8 +23224,7 @@ namespace ts {
             // will be a subtype or the same type as the argument.
             function narrowType(type: Type, expr: Expression, assumeTrue: boolean): Type {
                 // for `a?.b`, we emulate a synthetic `a !== null && a !== undefined` condition for `a`
-                if (isExpressionOfOptionalChainRoot(expr) ||
-                    isBinaryExpression(expr.parent) && expr.parent.operatorToken.kind === SyntaxKind.QuestionQuestionToken && expr.parent.left === expr) {
+                if (isExpressionOfOptionalChainRoot(expr) || isInQuestionQuestionTokenBranch(expr)) {
                     return narrowTypeByOptionality(type, expr, assumeTrue);
                 }
                 switch (expr.kind) {
@@ -23249,6 +23248,24 @@ namespace ts {
                         break;
                 }
                 return type;
+
+                function isInQuestionQuestionTokenBranch(expression: Expression) {
+                    let outAccessExpression = expression;
+                    let depth = 0;
+                    let lastExpression;
+                    while (isAccessExpression(outAccessExpression)) {
+                        depth = depth + 1;
+                        lastExpression = outAccessExpression;
+                        if (!isExpression(outAccessExpression.parent)) {// or isExpressionNode? which one should be used?
+                            return false;
+                        }
+                        outAccessExpression = outAccessExpression.parent;
+                    }
+                    const isQuestionQuestionTokenExpression = isBinaryExpression(outAccessExpression) && outAccessExpression.operatorToken.kind === SyntaxKind.QuestionQuestionToken;
+                    if (!isQuestionQuestionTokenExpression) { return false; }
+                    const isExpressOnLeft = (<BinaryExpression>outAccessExpression).left === lastExpression;
+                    return isQuestionQuestionTokenExpression && isExpressOnLeft;
+                }
             }
 
             function narrowTypeByOptionality(type: Type, expr: Expression, assumePresent: boolean): Type {

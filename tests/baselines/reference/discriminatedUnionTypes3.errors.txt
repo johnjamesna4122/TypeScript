@@ -1,4 +1,4 @@
-tests/cases/conformance/types/union/discriminatedUnionTypes3.ts(55,11): error TS2339: Property 's' does not exist on type 'T'.
+tests/cases/conformance/types/union/discriminatedUnionTypes3.ts(59,11): error TS2339: Property 's' does not exist on type 'T'.
 
 
 ==== tests/cases/conformance/types/union/discriminatedUnionTypes3.ts (1 errors) ====
@@ -47,10 +47,14 @@ tests/cases/conformance/types/union/discriminatedUnionTypes3.ts(55,11): error TS
         }
     }
     
+    function f36(x: X | W) {
+        x.type1?.type2 ?? x;
+    }
+    
     type S = { sub: { type0: X }, s: string }
     type T = { sub: { type0: Y }, t: string }
     
-    function f36(s: S | T) {
+    function f37(s: S | T) {
         if (s.sub.type0.type1.type2 === "a") {
             s.s // typeof s is S
             s.sub.type0.x // type of s.sub.type is X

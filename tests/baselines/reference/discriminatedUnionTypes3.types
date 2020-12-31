@@ -145,6 +145,20 @@ function f35(x: X | W) {
     }
 }
 
+function f36(x: X | W) {
+>f36 : (x: X | W) => void
+>x : X | W
+
+    x.type1?.type2 ?? x;
+>x.type1?.type2 ?? x : "a" | W
+>x.type1?.type2 : "a" | undefined
+>x.type1 : A | undefined
+>x : X | W
+>type1 : A | undefined
+>type2 : "a" | undefined
+>x : W
+}
+
 type S = { sub: { type0: X }, s: string }
 >S : S
 >sub : { type0: X; }
@@ -157,8 +171,8 @@ type T = { sub: { type0: Y }, t: string }
 >type0 : Y
 >t : string
 
-function f36(s: S | T) {
->f36 : (s: S | T) => void
+function f37(s: S | T) {
+>f37 : (s: S | T) => void
 >s : S | T
 
     if (s.sub.type0.type1.type2 === "a") {

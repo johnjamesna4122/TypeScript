@@ -46,10 +46,14 @@ function f35(x: X | W) {
     }
 }
 
+function f36(x: X | W) {
+    x.type1?.type2 ?? x;
+}
+
 type S = { sub: { type0: X }, s: string }
 type T = { sub: { type0: Y }, t: string }
 
-function f36(s: S | T) {
+function f37(s: S | T) {
     if (s.sub.type0.type1.type2 === "a") {
         s.s // typeof s is S
         s.sub.type0.x // type of s.sub.type is X
