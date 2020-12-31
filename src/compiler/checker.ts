@@ -22412,17 +22412,29 @@ namespace ts {
                 if (!propertyTypeArray) {
                     return type;
                 }
-                const reachableFinalType = (propertyTypeArray.filter(t => t.finalType !== undefined).map(t=>t.finalType) as Type[]);
+                const reachableFinalType = (propertyTypeArray.filter(t => t.finalType !== undefined).map(t => t.finalType) as Type[]);
                 const subtypes: Type[] = [];
                 forEach(reachableFinalType, propType => {
                     forEachType(propType, t => { subtypes.push(t); });
                 });
+                let rootNullable: Type[] = [];
+                if (type.flags & TypeFlags.Union) {
+                    rootNullable = (<UnionType>type).types.filter(t => t.id === undefinedType.id || t.id === nullType.id);
+                    rootNullable.forEach(t => {
+                        subtypes.push(t);
+                    });
+                }
                 const bigUnion = getUnionType(subtypes);
                 const narrowedPropType = narrowTypeCb(bigUnion);
                 const markSet = new Set<TypeId>();
                 propertyTypeArray.forEach(propertyType => {
                     if (propertyType.finalType && !(propertyType.finalType.flags & TypeFlags.Never) && isTypeComparableTo(propertyType.finalType, narrowedPropType)) {
                         markSet.add(propertyType.tyepeId);
+                    }
+                });
+                rootNullable.forEach(t => {
+                    if (isTypeComparableTo(t, narrowedPropType)) {
+                        markSet.add(t.id);
                     }
                 });
                 return filterType(type, (t) => markSet.has(t.id));
@@ -22828,7 +22840,8 @@ namespace ts {
 
                 if (some(propertyTypeArray, t => t.reason === DeepPropertyUnreachableReason.Error2339)) {
                     return undefined;
-                } else {
+                }
+                else {
                     return propertyTypeArray;
                 }
             }
