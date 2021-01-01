@@ -22298,31 +22298,6 @@ namespace ts {
             }
 
             function isMatchingReferenceDiscriminantNew(expr: Expression, computedType: Type) {
-                // main part is copied from function createUnionOrIntersectionProperty
-                function isTypeArrayDiscriminant(types: Type[], nullableFlag: boolean) {
-                    let checkFlags = 0;
-                    let firstType: Type | undefined;
-                    for (const type of types) {
-                        if (nullableFlag && (type.flags & TypeFlags.Nullable)) {
-                            continue;
-                        }
-                        if (!firstType) {
-                            firstType = type;
-                        }
-                        else if (type !== firstType) {
-                            checkFlags |= CheckFlags.HasNonUniformType;
-                        }
-                        if (isLiteralType(type)) {
-                            checkFlags |= CheckFlags.HasLiteralType;
-                        }
-                        if (type.flags & TypeFlags.Never) {
-                            checkFlags |= CheckFlags.HasNeverType;
-                        }
-                    }
-                    // next line is copied from isDiscriminantProperty
-                    return (checkFlags & CheckFlags.Discriminant) === CheckFlags.Discriminant && !maybeTypeOfKind(getUnionType(types), TypeFlags.Instantiable);
-                }
-
                 if (!isAccessExpression(expr)) {
                     return false;
                 }
@@ -22330,7 +22305,14 @@ namespace ts {
                 if (!propertyTypeArray) {
                     return false;
                 }
-                if (propertyTypeArray.some(t => t.reason === DeepPropertyUnreachableReason.OnlyNeverOnPath || t.reason === DeepPropertyUnreachableReason.OnlyNullableOnPath)) {
+
+                const reachableFinalType = (propertyTypeArray.filter(t => t.finalType !== undefined).map(t => t.finalType) as Type[]);
+                const rootNullable: Type[] = (computedType.flags & TypeFlags.Union) ? (<UnionType>computedType).types.filter(t => t.id === undefinedType.id || t.id === nullType.id) : [];
+
+                if (propertyTypeArray.some(t =>
+                    t.reason === DeepPropertyUnreachableReason.OnlyNeverOnPath || t.reason === DeepPropertyUnreachableReason.OnlyNullableOnPath
+                    && rootNullable.every(n => n.id !== t.tyepeId)
+                )) {
                     return true;
                 }
 
@@ -22394,7 +22376,6 @@ namespace ts {
                     //         }
                     //     }
                     // }
-
                     return true;
                 }
 
@@ -22404,7 +22385,32 @@ namespace ts {
                 // 3. nonNullable1 | nonNullable2...
                 // if root contains nullable type, for situation 1, we do not need to narrow.
                 const computedTypeIsNullable = maybeTypeOfKind(computedType, TypeFlags.Nullable);
-                return isTypeArrayDiscriminant(propertyTypeArray.map(t => t.finalType!), computedTypeIsNullable);
+                return isTypeArrayDiscriminant(reachableFinalType.concat(rootNullable), computedTypeIsNullable);
+
+                // main part is copied from function createUnionOrIntersectionProperty
+                function isTypeArrayDiscriminant(types: Type[], nullableFlag: boolean) {
+                    let checkFlags = 0;
+                    let firstType: Type | undefined;
+                    for (const type of types) {
+                        if (nullableFlag && (type.flags & TypeFlags.Nullable)) {
+                            continue;
+                        }
+                        if (!firstType) {
+                            firstType = type;
+                        }
+                        else if (type !== firstType) {
+                            checkFlags |= CheckFlags.HasNonUniformType;
+                        }
+                        if (isLiteralType(type)) {
+                            checkFlags |= CheckFlags.HasLiteralType;
+                        }
+                        if (type.flags & TypeFlags.Never) {
+                            checkFlags |= CheckFlags.HasNeverType;
+                        }
+                    }
+                    // next line is copied from isDiscriminantProperty
+                    return (checkFlags & CheckFlags.Discriminant) === CheckFlags.Discriminant && !maybeTypeOfKind(getUnionType(types), TypeFlags.Instantiable);
+                }
             }
 
             function narrowTypeByDiscriminantNew(type: Type, access: AccessExpression, narrowTypeCb: (t: Type) => Type): Type {
@@ -22413,17 +22419,14 @@ namespace ts {
                     return type;
                 }
                 const reachableFinalType = (propertyTypeArray.filter(t => t.finalType !== undefined).map(t => t.finalType) as Type[]);
+                const rootNullable: Type[] = (type.flags & TypeFlags.Union) ? (<UnionType>type).types.filter(t => t.id === undefinedType.id || t.id === nullType.id) : [];
                 const subtypes: Type[] = [];
                 forEach(reachableFinalType, propType => {
                     forEachType(propType, t => { subtypes.push(t); });
                 });
-                let rootNullable: Type[] = [];
-                if (type.flags & TypeFlags.Union) {
-                    rootNullable = (<UnionType>type).types.filter(t => t.id === undefinedType.id || t.id === nullType.id);
-                    rootNullable.forEach(t => {
-                        subtypes.push(t);
-                    });
-                }
+                rootNullable.forEach(t => {
+                    subtypes.push(t);
+                });
                 const bigUnion = getUnionType(subtypes);
                 const narrowedPropType = narrowTypeCb(bigUnion);
                 const markSet = new Set<TypeId>();
@@ -22879,6 +22882,8 @@ namespace ts {
                         }
                         const markSet = new Set<TypeId>();
 
+                        propertyTypeArray = propertyTypeArray.concat([{ tyepeId: undefinedType.id, finalType: undefinedType }, { tyepeId: nullType.id, finalType: nullType }]);
+
                         propertyTypeArray.forEach(propertyType => {
                             if (!propertyType.finalType) { return; }
                             const reachableFinalType = propertyType.finalType;
@@ -23067,10 +23072,12 @@ namespace ts {
                     propertyTypeArray = getPropertyTypesFromTypeAccordingToExpression(<UnionType>type, expr, /* optionalChainSlice */ isExpressionContainOptionalChain);
                 }
                 if (!propertyTypeArray) {
-                    return type;                    // return type;
+                    return type;
                 }
                 const secondFacts = notNullOrUndefinedFilter ? TypeFacts.NEUndefinedOrNull : TypeFacts.None;
                 const markSet = new Set<TypeId>();
+
+                propertyTypeArray = propertyTypeArray.concat([{ tyepeId: undefinedType.id, finalType: undefinedType }, { tyepeId: nullType.id, finalType: nullType }]);
 
                 propertyTypeArray.forEach(propertyType => {
                     if (!propertyType.finalType) { return; }
@@ -23266,7 +23273,7 @@ namespace ts {
                     let outAccessExpression = expression;
                     let depth = 0;
                     let lastExpression;
-                    while (isAccessExpression(outAccessExpression)) {
+                    do {
                         depth = depth + 1;
                         lastExpression = outAccessExpression;
                         if (!isExpression(outAccessExpression.parent)) {// or isExpressionNode? which one should be used?
@@ -23274,6 +23281,7 @@ namespace ts {
                         }
                         outAccessExpression = outAccessExpression.parent;
                     }
+                    while (isAccessExpression(outAccessExpression));
                     const isQuestionQuestionTokenExpression = isBinaryExpression(outAccessExpression) && outAccessExpression.operatorToken.kind === SyntaxKind.QuestionQuestionToken;
                     if (!isQuestionQuestionTokenExpression) { return false; }
                     const isExpressOnLeft = (<BinaryExpression>outAccessExpression).left === lastExpression;
@@ -31683,12 +31691,12 @@ namespace ts {
             }
             // If a type has been cached for the node, return it.
             // Note: this is not only cache, without this, some test case would always runs, such as binaryArithmeticControlFlowGraphNotTooLarge.
-            if (node.flags & NodeFlags.TypeCached && flowTypeCache) {
-                const cachedType = flowTypeCache[getNodeId(node)];
-                if (cachedType) {
-                    return cachedType;
-                }
-            }
+            // if (node.flags & NodeFlags.TypeCached && flowTypeCache) {
+            //     const cachedType = flowTypeCache[getNodeId(node)];
+            //     if (cachedType) {
+            //         return cachedType;
+            //     }
+            // }
             const startInvocationCount = flowInvocationCount;
             const type = checkExpression(node);
             // If control flow analysis was required to determine the type, it is worth caching.
