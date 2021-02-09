@@ -22939,7 +22939,7 @@ namespace ts {
                 // Get the type according to path from direct constituent. `undefined` means impossiable to reach type according to path.
                 finalType: Type | undefined;
                 // the reason why `finalType` is not reachable.
-                // `undefiend` only when finalType is not `undefined` (should it be?)
+                // `undefiend` only when finalType is not `undefined`
                 reason?: DeepPropertyUnreachableReason;
             }
 
@@ -22948,13 +22948,6 @@ namespace ts {
              * @param expressionWithOutKeyword an expression without any keyword. "typeof root.a" is not acceptable.
              */
             function getPropertyTypesFromTypeAccordingToExpression(type: Type, expressionWithOutKeyword: Expression): NarrowDeepPropertyInfo[] | undefined {
-                // This function is designed to be used in the first steps in follow steps:
-                // 1. get all properties' type of the origional types according to expression path
-                //   - In some case, should not narrow type according to the whole path, for example:
-                //   - typeof a.b?.c.d? !== number, === undefined, !==undefined, when we come to a, its type could only be narrowed by a.b.
-                //   - But for typeof a.b?.c.d? === number, when we come to a, it could be narrowed by the full path.
-                // 2. use expression to mark wanted types as 'true'
-                // 3. use the mark to get narrowed type from origional type.
 
                 // If expression is a, return []
                 // If expression is a.b["c"].d(), return ["b","c","d"]
