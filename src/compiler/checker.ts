@@ -13215,7 +13215,7 @@ namespace ts {
             const tupleTarget = getTupleTargetType(expandedFlags, target.readonly, expandedDeclarations);
             return tupleTarget === emptyGenericType ? emptyObjectType :
                 expandedFlags.length ? createTypeReference(tupleTarget, expandedTypes) :
-                    tupleTarget;
+                tupleTarget;
 
             function addElement(type: Type, flags: ElementFlags, declaration: NamedTupleMember | ParameterDeclaration | undefined) {
                 if (flags & ElementFlags.Required) {
@@ -18613,7 +18613,7 @@ namespace ts {
                             }
                             const sourceType = !isTupleType(source) ? sourceTypeArguments[0] :
                                 i < startCount || i >= targetArity - endCount ? sourceTypeArguments[sourceIndex] :
-                                    getElementTypeOfSliceOfTupleType(source, startCount, endCount) || neverType;
+                                getElementTypeOfSliceOfTupleType(source, startCount, endCount) || neverType;
                             const targetType = targetTypeArguments[i];
                             const targetCheckType = sourceFlags & ElementFlags.Variadic && targetFlags & ElementFlags.Rest ? createArrayType(targetType) : targetType;
                             const related = isRelatedTo(sourceType, targetCheckType, reportErrors, /*headMessage*/ undefined, intersectionState);
@@ -23038,13 +23038,11 @@ namespace ts {
                             type = getTypeOfPropertyOrIndexSignature(nonNullableTypeIfStrict, path);
                         }
 
-                        // if it is not accessable to all types, break;
                         if (type === unknownType) {
                             result.reason = getReasonOfUnreachableType(curType);
                             break;
                         }
 
-                        // The last one is what we need, just return it.
                         if (i === pathsLength - 1) {
                             result.finalType = type;
                             break;
