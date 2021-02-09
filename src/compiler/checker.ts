@@ -22678,6 +22678,9 @@ namespace ts {
                     if (!(declaredType.flags & TypeFlags.Union)) {
                         return false;
                     }
+                    if ((<UnionType>declaredType).types.filter(t => !(t.flags & TypeFlags.Primitive)).length < 2) {
+                        return false;
+                    }
                     // However, I still use declared type, and put it here. The main aim is for future improving.
                     // We could deal with 'this' type and use ugly code to deal with Condition 2, then we could avoid use declared type at least for now
                     // passing all tests and issue #39110/#39114, but does it deserve? Is the code clear enough?
