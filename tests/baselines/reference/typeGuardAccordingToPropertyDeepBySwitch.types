@@ -74,17 +74,17 @@ function f(u: Union) {
 }
 
 type Union2 = Foo1 | Foo2;
->Union2 : Foo1 | Foo2
+>Union2 : Union2
 
 function f2(u: Union2) {
 >f2 : (u: Union2) => void
->u : Foo1 | Foo2
+>u : Union2
 
     switch (typeof u.inner["secondKey"]) {
 >typeof u.inner["secondKey"] : "string" | "number" | "bigint" | "boolean" | "symbol" | "undefined" | "object" | "function"
 >u.inner["secondKey"] : number | boolean
 >u.inner : { secondKey: number; f1: number; } | { secondKey: boolean; f2: number; }
->u : Foo1 | Foo2
+>u : Union2
 >inner : { secondKey: number; f1: number; } | { secondKey: boolean; f2: number; }
 >"secondKey" : "secondKey"
 
@@ -102,7 +102,7 @@ function f2(u: Union2) {
 
         default:
             u;
->u : Foo1 | Foo2
+>u : Union2
     }
 }
 

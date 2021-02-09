@@ -60,7 +60,7 @@ tests/cases/conformance/controlFlow/controlFlowOptionalChain.ts(515,13): error T
 tests/cases/conformance/controlFlow/controlFlowOptionalChain.ts(567,21): error TS2532: Object is possibly 'undefined'.
 
 
-==== tests/cases/conformance/controlFlow/controlFlowOptionalChain.ts (61 errors) ====
+==== tests/cases/conformance/controlFlow/controlFlowOptionalChain.ts (60 errors) ====
     // assignments in shortcutting chain
     declare const o: undefined | {
         [key: string]: any;

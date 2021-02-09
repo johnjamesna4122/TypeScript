@@ -287,7 +287,7 @@ function f3(u: U2) {
             u.key1.key2;
 >u.key1.key2 : string | number
 >u.key1 : { key2: number; } | { key2: string; } | { key2: number; }
->u : U1
+>u : Foo1 | Foo2 | Foo3
 >key1 : { key2: number; } | { key2: string; } | { key2: number; }
 >key2 : string | number
 
@@ -352,7 +352,7 @@ function f4(u: U2) {
             u.key1.key2;
 >u.key1.key2 : string | number
 >u.key1 : { key2: number; } | { key2: string; } | { key2: number; }
->u : U1
+>u : Foo1 | Foo2 | Foo3
 >key1 : { key2: number; } | { key2: string; } | { key2: number; }
 >key2 : string | number
 
