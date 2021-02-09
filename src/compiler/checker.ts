@@ -3348,7 +3348,7 @@ namespace ts {
                         const moduleKind = getEmitModuleKind(compilerOptions);
                         if (moduleKind >= ModuleKind.ES2015) {
                             replacedImportSource += ".js";
-                    }
+                        }
                         error(errorNode, diag, tsExtension, replacedImportSource);
                     }
                     else if (!compilerOptions.resolveJsonModule &&
@@ -9267,7 +9267,7 @@ namespace ts {
                 if (!s.typeParameters && s.parameters.length === 1 && signatureHasRestParameter(s)) {
                     const paramType = getTypeOfParameter(s.parameters[0]);
                     return isTypeAny(paramType) || getElementTypeOfArrayType(paramType) === anyType;
-            }
+                }
             }
             return false;
         }
@@ -11257,7 +11257,7 @@ namespace ts {
                         }
                         else {
                             different = true;
-                    }
+                        }
                     }
                     if (!different) {
                         return t;
@@ -13152,13 +13152,13 @@ namespace ts {
                 return createTypeReference(target, elementTypes);
             }
             if (target.combinedFlags & ElementFlags.Variadic) {
-            // Transform [A, ...(X | Y | Z)] into [A, ...X] | [A, ...Y] | [A, ...Z]
-            const unionIndex = findIndex(elementTypes, (t, i) => !!(target.elementFlags[i] & ElementFlags.Variadic && t.flags & (TypeFlags.Never | TypeFlags.Union)));
-            if (unionIndex >= 0) {
-                return checkCrossProductUnion(map(elementTypes, (t, i) => target.elementFlags[i] & ElementFlags.Variadic ? t : unknownType)) ?
-                    mapType(elementTypes[unionIndex], t => createNormalizedTupleType(target, replaceElement(elementTypes, unionIndex, t))) :
-                    errorType;
-            }
+                // Transform [A, ...(X | Y | Z)] into [A, ...X] | [A, ...Y] | [A, ...Z]
+                const unionIndex = findIndex(elementTypes, (t, i) => !!(target.elementFlags[i] & ElementFlags.Variadic && t.flags & (TypeFlags.Never | TypeFlags.Union)));
+                if (unionIndex >= 0) {
+                    return checkCrossProductUnion(map(elementTypes, (t, i) => target.elementFlags[i] & ElementFlags.Variadic ? t : unknownType)) ?
+                        mapType(elementTypes[unionIndex], t => createNormalizedTupleType(target, replaceElement(elementTypes, unionIndex, t))) :
+                        errorType;
+                }
             }
             // We have optional, rest, or variadic elements that may need normalizing. Normalization ensures that all variadic
             // elements are generic and that the tuple type has one of the following layouts, disregarding variadic elements:
@@ -13215,7 +13215,7 @@ namespace ts {
             const tupleTarget = getTupleTargetType(expandedFlags, target.readonly, expandedDeclarations);
             return tupleTarget === emptyGenericType ? emptyObjectType :
                 expandedFlags.length ? createTypeReference(tupleTarget, expandedTypes) :
-                tupleTarget;
+                    tupleTarget;
 
             function addElement(type: Type, flags: ElementFlags, declaration: NamedTupleMember | ParameterDeclaration | undefined) {
                 if (flags & ElementFlags.Required) {
@@ -13223,20 +13223,20 @@ namespace ts {
                 }
                 if (flags & ElementFlags.Rest && firstRestIndex < 0) {
                     firstRestIndex = expandedFlags.length;
-                        }
+                }
                 if (flags & (ElementFlags.Optional | ElementFlags.Rest)) {
                     lastOptionalOrRestIndex = expandedFlags.length;
-                    }
-                    expandedTypes.push(type);
-                    expandedFlags.push(flags);
-                    if (expandedDeclarations && declaration) {
-                        expandedDeclarations.push(declaration);
-                    }
-                    else {
-                        expandedDeclarations = undefined;
-                    }
+                }
+                expandedTypes.push(type);
+                expandedFlags.push(flags);
+                if (expandedDeclarations && declaration) {
+                    expandedDeclarations.push(declaration);
+                }
+                else {
+                    expandedDeclarations = undefined;
                 }
             }
+        }
 
         function sliceTupleType(type: TupleTypeReference, index: number, endSkipCount = 0) {
             const target = type.target;
@@ -13329,31 +13329,31 @@ namespace ts {
                 i--;
                 const source = types[i];
                 if (hasEmptyObject || source.flags & TypeFlags.StructuredOrInstantiable) {
-                for (const target of types) {
-                    if (source !== target) {
-                        if (count === 100000) {
-                            // After 100000 subtype checks we estimate the remaining amount of work by assuming the
-                            // same ratio of checks per element. If the estimated number of remaining type checks is
+                    for (const target of types) {
+                        if (source !== target) {
+                            if (count === 100000) {
+                                // After 100000 subtype checks we estimate the remaining amount of work by assuming the
+                                // same ratio of checks per element. If the estimated number of remaining type checks is
                                 // greater than 1M we deem the union type too complex to represent. This for example
                                 // caps union types at 1000 unique object types.
-                            const estimatedCount = (count / (len - i)) * len;
+                                const estimatedCount = (count / (len - i)) * len;
                                 if (estimatedCount > 1000000) {
                                     tracing?.instant(tracing.Phase.CheckTypes, "removeSubtypes_DepthLimit", { typeIds: types.map(t => t.id) });
-                                error(currentNode, Diagnostics.Expression_produces_a_union_type_that_is_too_complex_to_represent);
-                                return false;
+                                    error(currentNode, Diagnostics.Expression_produces_a_union_type_that_is_too_complex_to_represent);
+                                    return false;
+                                }
                             }
-                        }
-                        count++;
-                        if (isTypeRelatedTo(source, target, strictSubtypeRelation) && (
-                            !(getObjectFlags(getTargetType(source)) & ObjectFlags.Class) ||
-                            !(getObjectFlags(getTargetType(target)) & ObjectFlags.Class) ||
-                            isTypeDerivedFrom(source, target))) {
-                            orderedRemoveItemAt(types, i);
-                            break;
+                            count++;
+                            if (isTypeRelatedTo(source, target, strictSubtypeRelation) && (
+                                !(getObjectFlags(getTargetType(source)) & ObjectFlags.Class) ||
+                                !(getObjectFlags(getTargetType(target)) & ObjectFlags.Class) ||
+                                isTypeDerivedFrom(source, target))) {
+                                orderedRemoveItemAt(types, i);
+                                break;
+                            }
                         }
                     }
                 }
-            }
             }
             return true;
         }
@@ -13437,16 +13437,16 @@ namespace ts {
                 }
                 if (unionReduction & (UnionReduction.Literal | UnionReduction.Subtype)) {
                     if (includes & (TypeFlags.Literal | TypeFlags.UniqueESSymbol) || includes & TypeFlags.Void && includes & TypeFlags.Undefined) {
-                            removeRedundantLiteralTypes(typeSet, includes);
-                        }
-                        if (includes & TypeFlags.StringLiteral && includes & TypeFlags.TemplateLiteral) {
-                            removeStringLiteralsMatchedByTemplateLiterals(typeSet);
-                        }
+                        removeRedundantLiteralTypes(typeSet, includes);
+                    }
+                    if (includes & TypeFlags.StringLiteral && includes & TypeFlags.TemplateLiteral) {
+                        removeStringLiteralsMatchedByTemplateLiterals(typeSet);
+                    }
                 }
                 if (unionReduction & UnionReduction.Subtype) {
                     if (!removeSubtypes(typeSet, !!(includes & TypeFlags.Object))) {
-                            return errorType;
-                        }
+                        return errorType;
+                    }
                 }
                 if (typeSet.length === 0) {
                     return includes & TypeFlags.Null ? includes & TypeFlags.IncludesNonWideningType ? nullType : nullWideningType :
@@ -14899,18 +14899,18 @@ namespace ts {
         }
 
         function tryMergeUnionOfObjectTypeAndEmptyObject(type: UnionType, readonly: boolean): Type | undefined {
-                if (every(type.types, isEmptyObjectTypeOrSpreadsIntoEmptyObject)) {
+            if (every(type.types, isEmptyObjectTypeOrSpreadsIntoEmptyObject)) {
                 return find(type.types, isEmptyObjectType) || emptyObjectType;
-                }
+            }
             const firstType = find(type.types, t => !isEmptyObjectTypeOrSpreadsIntoEmptyObject(t));
             if (!firstType) {
                 return undefined;
-                }
+            }
             const secondType = firstType && find(type.types, t => t !== firstType && !isEmptyObjectTypeOrSpreadsIntoEmptyObject(t));
             if (secondType) {
                 return undefined;
             }
-                    return getAnonymousPartialType(firstType);
+            return getAnonymousPartialType(firstType);
 
             function getAnonymousPartialType(type: Type) {
                 // gets the type as if it had been spread, but where everything in the spread is made optional
@@ -15786,7 +15786,7 @@ namespace ts {
                 const newTypes = instantiateTypes(types, mapper);
                 if (newTypes === types && aliasSymbol === type.aliasSymbol) {
                     return type;
-            }
+                }
                 const newAliasSymbol = aliasSymbol || type.aliasSymbol;
                 const newAliasTypeArguments = aliasSymbol ? aliasTypeArguments : instantiateTypes(type.aliasTypeArguments, mapper);
                 return flags & TypeFlags.Intersection || origin && origin.flags & TypeFlags.Intersection ?
@@ -17268,10 +17268,10 @@ namespace ts {
                         structuredTypeRelatedTo(source, target, reportErrors, intersectionState | IntersectionState.UnionIntersectionCheck);
                 }
                 if (!result && !(source.flags & TypeFlags.Union) && (source.flags & (TypeFlags.StructuredOrInstantiable) || target.flags & TypeFlags.StructuredOrInstantiable)) {
-                        if (result = recursiveTypeRelatedTo(source, target, reportErrors, intersectionState)) {
-                            resetErrorInfo(saveErrorInfo);
-                        }
+                    if (result = recursiveTypeRelatedTo(source, target, reportErrors, intersectionState)) {
+                        resetErrorInfo(saveErrorInfo);
                     }
+                }
                 if (!result && source.flags & (TypeFlags.Intersection | TypeFlags.TypeParameter)) {
                     // The combined constraint of an intersection type is the intersection of the constraints of
                     // the constituents. When an intersection type contains instantiable types with union type
@@ -17286,7 +17286,7 @@ namespace ts {
                     // needs to have its constraint hoisted into an intersection with said type parameter, this way
                     // the type param can be compared with itself in the target (with the influence of its constraint to match other parts)
                     // For example, if `T extends 1 | 2` and `U extends 2 | 3` and we compare `T & U` to `T & U & (1 | 2 | 3)`
-                    const constraint = getEffectiveConstraintOfIntersection(source.flags & TypeFlags.Intersection ? (<IntersectionType>source).types: [source], !!(target.flags & TypeFlags.Union));
+                    const constraint = getEffectiveConstraintOfIntersection(source.flags & TypeFlags.Intersection ? (<IntersectionType>source).types : [source], !!(target.flags & TypeFlags.Union));
                     if (constraint && (source.flags & TypeFlags.Intersection || target.flags & TypeFlags.Union)) {
                         if (everyType(constraint, c => c !== source)) { // Skip comparison if expansion contains the source itself
                             // TODO: Stack errors so we get a pyramid for the "normal" comparison above, _and_ a second for this
@@ -18022,17 +18022,17 @@ namespace ts {
                 else if (source.flags & TypeFlags.TemplateLiteral) {
                     if (target.flags & TypeFlags.TemplateLiteral &&
                         (source as TemplateLiteralType).texts.length === (target as TemplateLiteralType).texts.length &&
-                            (source as TemplateLiteralType).types.length === (target as TemplateLiteralType).types.length &&
-                            every((source as TemplateLiteralType).texts, (t, i) => t === (target as TemplateLiteralType).texts[i]) &&
-                            every((instantiateType(source, makeFunctionTypeMapper(reportUnreliableMarkers)) as TemplateLiteralType).types, (t, i) => !!((target as TemplateLiteralType).types[i].flags & (TypeFlags.Any | TypeFlags.String)) || !!isRelatedTo(t, (target as TemplateLiteralType).types[i], /*reportErrors*/ false))) {
-                            return Ternary.True;
-                        }
-                        const constraint = getBaseConstraintOfType(source);
-                    if (constraint && constraint !== source && (result = isRelatedTo(constraint, target, reportErrors))) {
-                            resetErrorInfo(saveErrorInfo);
-                            return result;
-                        }
+                        (source as TemplateLiteralType).types.length === (target as TemplateLiteralType).types.length &&
+                        every((source as TemplateLiteralType).texts, (t, i) => t === (target as TemplateLiteralType).texts[i]) &&
+                        every((instantiateType(source, makeFunctionTypeMapper(reportUnreliableMarkers)) as TemplateLiteralType).types, (t, i) => !!((target as TemplateLiteralType).types[i].flags & (TypeFlags.Any | TypeFlags.String)) || !!isRelatedTo(t, (target as TemplateLiteralType).types[i], /*reportErrors*/ false))) {
+                        return Ternary.True;
                     }
+                    const constraint = getBaseConstraintOfType(source);
+                    if (constraint && constraint !== source && (result = isRelatedTo(constraint, target, reportErrors))) {
+                        resetErrorInfo(saveErrorInfo);
+                        return result;
+                    }
+                }
                 else if (source.flags & TypeFlags.StringMapping) {
                     if (target.flags & TypeFlags.StringMapping && (<StringMappingType>source).symbol === (<StringMappingType>target).symbol) {
                         if (result = isRelatedTo((<StringMappingType>source).type, (<StringMappingType>target).type, reportErrors)) {
@@ -18579,46 +18579,46 @@ namespace ts {
                         const targetTypeArguments = getTypeArguments(target);
                         const startCount = Math.min(isTupleType(source) ? getStartElementCount(source.target, ElementFlags.NonRest) : 0, getStartElementCount(target.target, ElementFlags.NonRest));
                         const endCount = Math.min(isTupleType(source) ? getEndElementCount(source.target, ElementFlags.NonRest) : 0, targetRestFlag ? getEndElementCount(target.target, ElementFlags.NonRest) : 0);
-                            let canExcludeDiscriminants = !!excludedProperties;
+                        let canExcludeDiscriminants = !!excludedProperties;
                         for (let i = 0; i < targetArity; i++) {
                             const sourceIndex = i < targetArity - endCount ? i : i + sourceArity - targetArity;
                             const sourceFlags = isTupleType(source) && (i < startCount || i >= targetArity - endCount) ? source.target.elementFlags[sourceIndex] : ElementFlags.Rest;
                             const targetFlags = target.target.elementFlags[i];
                             if (targetFlags & ElementFlags.Variadic && !(sourceFlags & ElementFlags.Variadic)) {
-                                    if (reportErrors) {
+                                if (reportErrors) {
                                     reportError(Diagnostics.Source_provides_no_match_for_variadic_element_at_position_0_in_target, i);
-                                    }
-                                    return Ternary.False;
                                 }
+                                return Ternary.False;
+                            }
                             if (sourceFlags & ElementFlags.Variadic && !(targetFlags & ElementFlags.Variable)) {
-                                        if (reportErrors) {
+                                if (reportErrors) {
                                     reportError(Diagnostics.Variadic_element_at_position_0_in_source_does_not_match_element_at_position_1_in_target, sourceIndex, i);
-                                        }
-                                        return Ternary.False;
-                                    }
+                                }
+                                return Ternary.False;
+                            }
                             if (targetFlags & ElementFlags.Required && !(sourceFlags & ElementFlags.Required)) {
                                 if (reportErrors) {
                                     reportError(Diagnostics.Source_provides_no_match_for_required_element_at_position_0_in_target, i);
                                 }
                                 return Ternary.False;
                             }
-                                // We can only exclude discriminant properties if we have not yet encountered a variable-length element.
-                                if (canExcludeDiscriminants) {
-                                    if (sourceFlags & ElementFlags.Variable || targetFlags & ElementFlags.Variable) {
-                                        canExcludeDiscriminants = false;
-                                    }
-                                    if (canExcludeDiscriminants && excludedProperties?.has(("" + i) as __String)) {
-                                        continue;
-                                    }
+                            // We can only exclude discriminant properties if we have not yet encountered a variable-length element.
+                            if (canExcludeDiscriminants) {
+                                if (sourceFlags & ElementFlags.Variable || targetFlags & ElementFlags.Variable) {
+                                    canExcludeDiscriminants = false;
                                 }
+                                if (canExcludeDiscriminants && excludedProperties?.has(("" + i) as __String)) {
+                                    continue;
+                                }
+                            }
                             const sourceType = !isTupleType(source) ? sourceTypeArguments[0] :
                                 i < startCount || i >= targetArity - endCount ? sourceTypeArguments[sourceIndex] :
-                                getElementTypeOfSliceOfTupleType(source, startCount, endCount) || neverType;
+                                    getElementTypeOfSliceOfTupleType(source, startCount, endCount) || neverType;
                             const targetType = targetTypeArguments[i];
-                                const targetCheckType = sourceFlags & ElementFlags.Variadic && targetFlags & ElementFlags.Rest ? createArrayType(targetType) : targetType;
-                                const related = isRelatedTo(sourceType, targetCheckType, reportErrors, /*headMessage*/ undefined, intersectionState);
-                                if (!related) {
-                                    if (reportErrors) {
+                            const targetCheckType = sourceFlags & ElementFlags.Variadic && targetFlags & ElementFlags.Rest ? createArrayType(targetType) : targetType;
+                            const related = isRelatedTo(sourceType, targetCheckType, reportErrors, /*headMessage*/ undefined, intersectionState);
+                            if (!related) {
+                                if (reportErrors) {
                                     if (i < startCount || i >= targetArity - endCount || sourceArity - startCount - endCount === 1) {
                                         reportIncompatibleError(Diagnostics.Type_at_position_0_in_source_is_not_compatible_with_type_at_position_1_in_target, sourceIndex, i);
                                     }
@@ -18626,10 +18626,10 @@ namespace ts {
                                         reportIncompatibleError(Diagnostics.Type_at_positions_0_through_1_in_source_is_not_compatible_with_type_at_position_2_in_target, startCount, sourceArity - endCount - 1, i);
                                     }
                                 }
-                                    return Ternary.False;
-                                }
-                                result &= related;
+                                return Ternary.False;
                             }
+                            result &= related;
+                        }
                         return result;
                     }
                     if (target.target.combinedFlags & ElementFlags.Variable) {
@@ -21979,7 +21979,7 @@ namespace ts {
                         if (type) {
                             const name = (<PropertyAccessExpression>node).name;
                             const prop = getPropertyOfType(type, isPrivateIdentifier(name) ? getSymbolNameForPrivateIdentifier(type.symbol, name.escapedText) : name.escapedText);
-                        return prop && getExplicitTypeOfSymbol(prop, diagnostic);
+                            return prop && getExplicitTypeOfSymbol(prop, diagnostic);
                         }
                         return undefined;
                     }
@@ -25263,7 +25263,7 @@ namespace ts {
                     const args = fillMissingTypeArguments([ctorType, attributesType], (declaredManagedType as GenericType).typeParameters, 2, isInJSFile(context));
                     return createTypeReference((declaredManagedType as GenericType), args);
                 }
-                }
+            }
             return attributesType;
         }
 
@@ -32968,7 +32968,7 @@ namespace ts {
                     grammarErrorOnNode(e, Diagnostics.A_required_element_cannot_follow_an_optional_element);
                     break;
                 }
-                }
+            }
             forEach(node.elements, checkSourceElement);
             getTypeFromTypeNode(node);
         }
@@ -34356,7 +34356,7 @@ namespace ts {
                      * const { a: _a } = { a: 1 }
                      */
                     return !!(declaration.propertyName && isIdentifierThatStartsWithUnderscore(declaration.name));
-            }
+                }
                 return isIdentifierThatStartsWithUnderscore(declaration.name);
             }
             return isAmbientModule(declaration) ||
@@ -36436,8 +36436,8 @@ namespace ts {
                     }
                     if (baseConstructorType.flags & TypeFlags.TypeVariable) {
                         if (!isMixinConstructorType(staticType)) {
-                        error(node.name || node, Diagnostics.A_mixin_class_must_have_a_constructor_with_a_single_rest_parameter_of_type_any);
-                    }
+                            error(node.name || node, Diagnostics.A_mixin_class_must_have_a_constructor_with_a_single_rest_parameter_of_type_any);
+                        }
                         else {
                             const constructSignatures = getSignaturesOfType(baseConstructorType, SignatureKind.Construct);
                             if (constructSignatures.some(signature => signature.flags & SignatureFlags.Abstract) && !hasSyntacticModifier(node, ModifierFlags.Abstract)) {
@@ -40589,7 +40589,7 @@ namespace ts {
                 if (!(forInOrOfStatement.flags & NodeFlags.AwaitContext)) {
                     const sourceFile = getSourceFileOfNode(forInOrOfStatement);
                     if (isInTopLevelContext(forInOrOfStatement)) {
-                    if (!hasParseDiagnostics(sourceFile)) {
+                        if (!hasParseDiagnostics(sourceFile)) {
                             if (!isEffectiveExternalModule(sourceFile, compilerOptions)) {
                                 diagnostics.add(createDiagnosticForNode(forInOrOfStatement.awaitModifier,
                                     Diagnostics.for_await_loops_are_only_allowed_at_the_top_level_of_a_file_when_that_file_is_a_module_but_this_file_has_no_imports_or_exports_Consider_adding_an_empty_export_to_make_this_file_a_module));
@@ -40604,15 +40604,15 @@ namespace ts {
                         // use of 'for-await-of' in non-async function
                         if (!hasParseDiagnostics(sourceFile)) {
                             const diagnostic = createDiagnosticForNode(forInOrOfStatement.awaitModifier, Diagnostics.for_await_loops_are_only_allowed_within_async_functions_and_at_the_top_levels_of_modules);
-                        const func = getContainingFunction(forInOrOfStatement);
-                        if (func && func.kind !== SyntaxKind.Constructor) {
-                            Debug.assert((getFunctionFlags(func) & FunctionFlags.Async) === 0, "Enclosing function should never be an async function.");
-                            const relatedInfo = createDiagnosticForNode(func, Diagnostics.Did_you_mean_to_mark_this_function_as_async);
-                            addRelatedInfo(diagnostic, relatedInfo);
+                            const func = getContainingFunction(forInOrOfStatement);
+                            if (func && func.kind !== SyntaxKind.Constructor) {
+                                Debug.assert((getFunctionFlags(func) & FunctionFlags.Async) === 0, "Enclosing function should never be an async function.");
+                                const relatedInfo = createDiagnosticForNode(func, Diagnostics.Did_you_mean_to_mark_this_function_as_async);
+                                addRelatedInfo(diagnostic, relatedInfo);
+                            }
+                            diagnostics.add(diagnostic);
+                            return true;
                         }
-                        diagnostics.add(diagnostic);
-                        return true;
-                    }
                     }
                     return false;
                 }
