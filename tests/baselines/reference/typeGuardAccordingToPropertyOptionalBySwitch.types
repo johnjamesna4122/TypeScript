@@ -85,7 +85,7 @@ function f1(u: U1) {
             u.key1.key2;
 >u.key1.key2 : any
 >u.key1 : undefined
->u : U1
+>u : Foo1 | Foo2
 >key1 : undefined
 >key2 : any
 
@@ -129,9 +129,9 @@ function f2(u: U1) {
         default:
             u.key1.key2;
 >u.key1.key2 : string
->u.key1 : { key2: number; } | { key2: string; } | { key2: number; } | undefined
->u : U1
->key1 : { key2: number; } | { key2: string; } | { key2: number; } | undefined
+>u.key1 : { key2: string; } | undefined
+>u : Foo1 | Foo2
+>key1 : { key2: string; } | undefined
 >key2 : string
 
             break;
@@ -148,11 +148,11 @@ function f2(u: U1) {
 >'undefined' : "undefined"
 
             u.key1.key2;
->u.key1.key2 : never
->u.key1 : { key2: number; } | { key2: string; } | { key2: number; } | undefined
->u : U1
->key1 : { key2: number; } | { key2: string; } | { key2: number; } | undefined
->key2 : never
+>u.key1.key2 : any
+>u.key1 : undefined
+>u : Foo1 | Foo2
+>key1 : undefined
+>key2 : any
 
             break;
         default:
@@ -187,18 +187,18 @@ function f2Plus(u: U1) {
 
             u.key1.key2;
 >u.key1.key2 : number
->u.key1 : { key2: number; } | { key2: string; } | { key2: number; } | undefined
+>u.key1 : { key2: number; } | { key2: number; } | undefined
 >u : U1
->key1 : { key2: number; } | { key2: string; } | { key2: number; } | undefined
+>key1 : { key2: number; } | { key2: number; } | undefined
 >key2 : number
 
             break;
         default:
             u.key1.key2;
 >u.key1.key2 : string
->u.key1 : { key2: number; } | { key2: string; } | { key2: number; }
->u : U1
->key1 : { key2: number; } | { key2: string; } | { key2: number; }
+>u.key1 : { key2: string; }
+>u : Foo2
+>key1 : { key2: string; }
 >key2 : string
 
             break;
@@ -278,7 +278,7 @@ function f3(u: U2) {
             u.key1.key2;
 >u.key1.key2 : any
 >u.key1 : undefined
->u : U2
+>u : Foo1 | Foo2 | undefined
 >key1 : undefined
 >key2 : any
 
@@ -322,9 +322,9 @@ function f4(u: U2) {
         default:
             u.key1.key2;
 >u.key1.key2 : string
->u.key1 : { key2: number; } | { key2: string; } | { key2: number; } | undefined
->u : U2
->key1 : { key2: number; } | { key2: string; } | { key2: number; } | undefined
+>u.key1 : { key2: string; } | undefined
+>u : Foo1 | Foo2 | undefined
+>key1 : { key2: string; } | undefined
 >key2 : string
 
             break;
@@ -341,11 +341,11 @@ function f4(u: U2) {
 >'undefined' : "undefined"
 
             u.key1.key2;
->u.key1.key2 : never
->u.key1 : { key2: number; } | { key2: string; } | { key2: number; } | undefined
->u : U2
->key1 : { key2: number; } | { key2: string; } | { key2: number; } | undefined
->key2 : never
+>u.key1.key2 : any
+>u.key1 : undefined
+>u : Foo1 | Foo2 | undefined
+>key1 : undefined
+>key2 : any
 
             break;
         default:

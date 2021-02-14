@@ -1,7 +1,6 @@
 tests/cases/conformance/expressions/typeGuards/typeGuardAccordingToPropertyBySwitch.ts(60,15): error TS2339: Property 'n1' does not exist on type 'Boolean1 | Boolean2'.
   Property 'n1' does not exist on type 'Boolean1'.
-tests/cases/conformance/expressions/typeGuards/typeGuardAccordingToPropertyBySwitch.ts(66,15): error TS2339: Property 'n1' does not exist on type 'Union1'.
-  Property 'n1' does not exist on type 'Boolean1'.
+tests/cases/conformance/expressions/typeGuards/typeGuardAccordingToPropertyBySwitch.ts(66,15): error TS2339: Property 'n1' does not exist on type 'never'.
 tests/cases/conformance/expressions/typeGuards/typeGuardAccordingToPropertyBySwitch.ts(74,15): error TS2339: Property 'n1' does not exist on type 'Boolean1 | Boolean2'.
   Property 'n1' does not exist on type 'Boolean1'.
 
@@ -77,8 +76,7 @@ tests/cases/conformance/expressions/typeGuards/typeGuardAccordingToPropertyBySwi
             default:
                 u.n1;
                   ~~
-!!! error TS2339: Property 'n1' does not exist on type 'Union1'.
-!!! error TS2339:   Property 'n1' does not exist on type 'Boolean1'.
+!!! error TS2339: Property 'n1' does not exist on type 'never'.
                 break;
         }
     }

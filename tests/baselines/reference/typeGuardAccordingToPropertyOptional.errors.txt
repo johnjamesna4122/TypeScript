@@ -3,6 +3,8 @@ tests/cases/conformance/expressions/typeGuards/typeGuardAccordingToPropertyOptio
 tests/cases/conformance/expressions/typeGuards/typeGuardAccordingToPropertyOptional.ts(37,9): error TS2532: Object is possibly 'undefined'.
 tests/cases/conformance/expressions/typeGuards/typeGuardAccordingToPropertyOptional.ts(44,9): error TS2532: Object is possibly 'undefined'.
 tests/cases/conformance/expressions/typeGuards/typeGuardAccordingToPropertyOptional.ts(53,9): error TS2532: Object is possibly 'undefined'.
+tests/cases/conformance/expressions/typeGuards/typeGuardAccordingToPropertyOptional.ts(58,63): error TS2339: Property 'key2' does not exist on type 'never'.
+tests/cases/conformance/expressions/typeGuards/typeGuardAccordingToPropertyOptional.ts(59,9): error TS2532: Object is possibly 'undefined'.
 tests/cases/conformance/expressions/typeGuards/typeGuardAccordingToPropertyOptional.ts(62,9): error TS2532: Object is possibly 'undefined'.
 tests/cases/conformance/expressions/typeGuards/typeGuardAccordingToPropertyOptional.ts(68,9): error TS2532: Object is possibly 'undefined'.
 tests/cases/conformance/expressions/typeGuards/typeGuardAccordingToPropertyOptional.ts(78,9): error TS2532: Object is possibly 'undefined'.
@@ -16,7 +18,7 @@ tests/cases/conformance/expressions/typeGuards/typeGuardAccordingToPropertyOptio
 tests/cases/conformance/expressions/typeGuards/typeGuardAccordingToPropertyOptional.ts(103,9): error TS2532: Object is possibly 'undefined'.
 
 
-==== tests/cases/conformance/expressions/typeGuards/typeGuardAccordingToPropertyOptional.ts (16 errors) ====
+==== tests/cases/conformance/expressions/typeGuards/typeGuardAccordingToPropertyOptional.ts (18 errors) ====
     interface Foo1 {
         key1: {
             key2: number;
@@ -85,7 +87,11 @@ tests/cases/conformance/expressions/typeGuards/typeGuardAccordingToPropertyOptio
     
     function f2Plus(u: U1) {
         if (typeof u.key1?.key2 === 'undefined' && typeof u.key1?.key2 === 'number') {
+                                                                  ~~~~
+!!! error TS2339: Property 'key2' does not exist on type 'never'.
             u.key1.key2;
+            ~~~~~~
+!!! error TS2532: Object is possibly 'undefined'.
         }
         if (typeof u.key1?.key2 === 'undefined' || typeof u.key1?.key2 === 'number') {
             u.key1.key2;    // Error

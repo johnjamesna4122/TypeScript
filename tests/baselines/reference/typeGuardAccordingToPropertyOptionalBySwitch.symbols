@@ -86,9 +86,9 @@ function f1(u: U1) {
 
         case 'undefined':
             u.key1.key2;
->u.key1 : Symbol(key1, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 0, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 7, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 14, 16))
+>u.key1 : Symbol(key1, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 0, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 7, 16))
 >u : Symbol(u, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 25, 12))
->key1 : Symbol(key1, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 0, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 7, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 14, 16))
+>key1 : Symbol(key1, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 0, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 7, 16))
 
             break;
         default:
@@ -127,11 +127,11 @@ function f2(u: U1) {
             break;
         default:
             u.key1.key2;
->u.key1.key2 : Symbol(key2, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 1, 11), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 8, 11), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 15, 11))
->u.key1 : Symbol(key1, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 0, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 7, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 14, 16))
+>u.key1.key2 : Symbol(key2, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 8, 11))
+>u.key1 : Symbol(key1, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 0, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 7, 16))
 >u : Symbol(u, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 45, 12))
->key1 : Symbol(key1, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 0, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 7, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 14, 16))
->key2 : Symbol(key2, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 1, 11), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 8, 11), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 15, 11))
+>key1 : Symbol(key1, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 0, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 7, 16))
+>key2 : Symbol(key2, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 8, 11))
 
             break;
     }
@@ -144,11 +144,9 @@ function f2(u: U1) {
 
         case 'undefined':
             u.key1.key2;
->u.key1.key2 : Symbol(key2, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 1, 11), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 8, 11), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 15, 11))
->u.key1 : Symbol(key1, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 0, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 7, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 14, 16))
+>u.key1 : Symbol(key1, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 0, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 7, 16))
 >u : Symbol(u, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 45, 12))
->key1 : Symbol(key1, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 0, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 7, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 14, 16))
->key2 : Symbol(key2, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 1, 11), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 8, 11), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 15, 11))
+>key1 : Symbol(key1, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 0, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 7, 16))
 
             break;
         default:
@@ -178,20 +176,20 @@ function f2Plus(u: U1) {
         case 'number':
         case 'undefined':
             u.key1.key2;
->u.key1.key2 : Symbol(key2, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 1, 11), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 8, 11), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 15, 11))
+>u.key1.key2 : Symbol(key2, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 1, 11), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 15, 11))
 >u.key1 : Symbol(key1, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 0, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 7, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 14, 16))
 >u : Symbol(u, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 64, 16))
 >key1 : Symbol(key1, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 0, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 7, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 14, 16))
->key2 : Symbol(key2, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 1, 11), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 8, 11), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 15, 11))
+>key2 : Symbol(key2, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 1, 11), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 15, 11))
 
             break;
         default:
             u.key1.key2;
->u.key1.key2 : Symbol(key2, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 1, 11), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 8, 11), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 15, 11))
->u.key1 : Symbol(key1, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 0, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 7, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 14, 16))
+>u.key1.key2 : Symbol(key2, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 8, 11))
+>u.key1 : Symbol(Foo2.key1, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 7, 16))
 >u : Symbol(u, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 64, 16))
->key1 : Symbol(key1, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 0, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 7, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 14, 16))
->key2 : Symbol(key2, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 1, 11), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 8, 11), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 15, 11))
+>key1 : Symbol(Foo2.key1, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 7, 16))
+>key2 : Symbol(key2, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 8, 11))
 
             break;
     }
@@ -252,9 +250,9 @@ function f3(u: U2) {
 
         case 'undefined':
             u.key1.key2;
->u.key1 : Symbol(key1, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 0, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 7, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 14, 16))
+>u.key1 : Symbol(key1, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 0, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 7, 16))
 >u : Symbol(u, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 85, 12))
->key1 : Symbol(key1, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 0, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 7, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 14, 16))
+>key1 : Symbol(key1, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 0, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 7, 16))
 
             break;
         default:
@@ -293,11 +291,11 @@ function f4(u: U2) {
             break;
         default:
             u.key1.key2;
->u.key1.key2 : Symbol(key2, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 1, 11), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 8, 11), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 15, 11))
->u.key1 : Symbol(key1, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 0, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 7, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 14, 16))
+>u.key1.key2 : Symbol(key2, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 8, 11))
+>u.key1 : Symbol(key1, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 0, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 7, 16))
 >u : Symbol(u, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 105, 12))
->key1 : Symbol(key1, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 0, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 7, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 14, 16))
->key2 : Symbol(key2, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 1, 11), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 8, 11), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 15, 11))
+>key1 : Symbol(key1, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 0, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 7, 16))
+>key2 : Symbol(key2, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 8, 11))
 
             break;
     }
@@ -310,11 +308,9 @@ function f4(u: U2) {
 
         case 'undefined':
             u.key1.key2;
->u.key1.key2 : Symbol(key2, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 1, 11), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 8, 11), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 15, 11))
->u.key1 : Symbol(key1, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 0, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 7, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 14, 16))
+>u.key1 : Symbol(key1, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 0, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 7, 16))
 >u : Symbol(u, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 105, 12))
->key1 : Symbol(key1, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 0, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 7, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 14, 16))
->key2 : Symbol(key2, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 1, 11), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 8, 11), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 15, 11))
+>key1 : Symbol(key1, Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 0, 16), Decl(typeGuardAccordingToPropertyOptionalBySwitch.ts, 7, 16))
 
             break;
         default:

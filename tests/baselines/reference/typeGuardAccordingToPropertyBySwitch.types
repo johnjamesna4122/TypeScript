@@ -122,7 +122,7 @@ function f1_1(u: Union1) {
         default:
             u.n1;
 >u.n1 : any
->u : Union1
+>u : never
 >n1 : any
 
             break;
@@ -340,7 +340,7 @@ function f2_3(u: Union2) {
             break;
         default:
             u;
->u : Union2
+>u : Symbol1 | Undefined1 | Function1 | Obejct1
 
             break;
     }
@@ -374,7 +374,7 @@ function f2_4(u: Union2) {
             break;
         default:
             u;
->u : Boolean1 | BigInt1 | Number1 | String1 | Symbol1 | Function1 | Obejct1
+>u : Boolean1 | BigInt1 | Number1 | String1
 
             break;
     }
