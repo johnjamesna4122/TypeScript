@@ -7970,8 +7970,8 @@ namespace ts {
             return prop ? getTypeOfSymbol(prop) : undefined;
         }
 
-        function getTypeOfPropertyOrIndexSignature(type: Type, name: __String): Type {
-            return getTypeOfPropertyOfType(type, name) || isNumericLiteralName(name) && getIndexTypeOfType(type, IndexKind.Number) || getIndexTypeOfType(type, IndexKind.String) || unknownType;
+        function getTypeOfPropertyOrIndexSignature(type: Type, name: __String): Type | undefined {
+            return getTypeOfPropertyOfType(type, name) || isNumericLiteralName(name) && getIndexTypeOfType(type, IndexKind.Number) || getIndexTypeOfType(type, IndexKind.String);
         }
 
         function isTypeAny(type: Type | undefined) {
@@ -22631,73 +22631,12 @@ namespace ts {
                 const reachableFinalType = mapDefined(propertyTypeArray, t => t.finalType);
                 const rootNullable: Type[] = (computedType.flags & TypeFlags.Union) ? (<UnionType>computedType).types.filter(t => t.id === undefinedType.id || t.id === nullType.id) : [];
 
-                if (propertyTypeArray.some(t =>
-                    t.reason === DeepPropertyUnreachableReason.OnlyNeverOnPath || t.reason === DeepPropertyUnreachableReason.OnlyNullableOnPath
-                    && rootNullable.every(n => n.id !== t.typeId)
-                )) {
+                if (reachableFinalType.length < propertyTypeArray.length && !some(rootNullable, t => some(propertyTypeArray, info => info.typeId === t.id))) {
                     return true;
                 }
 
                 if (!(computedType.flags & TypeFlags.Union)) {
-                    // Whether we fall back to the declared type depends entirely on how
-                    // the type could be subsequently narrowed.
-                    /**
-                     * Condition 1: computed type is not union any more.
-                     *  // omit the defination, which is easy to be infered through code and intention
-                     *  function foo(x: A | B): any {
-                     *       x;  // A | B
-                     *       if ( 'A' === x.type ) { // first trigger
-                     *           return x;  // A
-                     *       }
-                     *       x;  // B
-                     *       if ('B' === x.type) {  // second trigger
-                     *           return x;  // B
-                     *       }
-                     *       x;  // In the second time narrowing, the computed type would only have one(not Union), but should still be triggered to narrow type to never.
-                     *   }
-                     */
-                    // use declaredType is a quick way to resolve issue above -- when computed type is not union, the declared type is not chagned.
-                    // But it also bring some other issue, like #39114 and #39110. As long as the declared type is not proper, issues come.
-
-                    // and only declared union is too loose to judge it could be narrowed.
-                    /**
-                     * Condition 2: Index type with undefined/null
-                     *   function ffff1() {
-                     *       let a: Array<number>|undefined;
-                     *       a = [1];
-                     *       if(a){
-                     *           if (a[2] !== undefined) {
-                     *               a[1];
-                     *           } else {
-                     *               a[2];  // declared type is union, but here should not be narrowed to never.
-                     *           }
-                     *       }
-                     *   }
-                     */
-                    if (!(declaredType.flags & TypeFlags.Union)) {
-                        return false;
-                    }
-                    if ((<UnionType>declaredType).types.filter(t => !(t.flags & TypeFlags.Primitive)).length < 2) {
-                        return false;
-                    }
-                    // However, I still use declared type, and put it here. The main aim is for future improving.
-                    // We could deal with 'this' type and use ugly code to deal with Condition 2, then we could avoid use declared type at least for now
-                    // passing all tests and issue #39110/#39114, but does it deserve? Is the code clear enough?
-
-                    // if(isThisTypeParameter(computedType)){
-                    //     return false;
-                    // }
-                    // if(isElementAccessExpression(expr)){
-                    //     // the only purpose of these code is to omit above condition 2.
-                    //     const type = getReducedApparentType(computedType);
-                    //     if (type.flags & TypeFlags.Object) {
-                    //         const resolved = resolveStructuredTypeMembers(<ObjectType>type);
-                    //         if(resolved.stringIndexInfo || resolved.numberIndexInfo){
-                    //             return false;
-                    //         }
-                    //     }
-                    // }
-                    return true;
+                    return !!(declaredType.flags & TypeFlags.Union);
                 }
 
                 return isTypeArrayDiscriminant(reachableFinalType);
@@ -22912,20 +22851,11 @@ namespace ts {
                 return type;
             }
 
-            const enum DeepPropertyUnreachableReason {
-                Error2339,
-                OnlyNeverOnPath,
-                OnlyNullableOnPath
-            }
-
             interface NarrowDeepPropertyInfo {
                 // Direct constituent of one union type.
                 typeId: TypeId;
                 // Get the type according to path from direct constituent. `undefined` means impossiable to reach type according to path.
                 finalType: Type | undefined;
-                // the reason why `finalType` is not reachable.
-                // `undefiend` only when finalType is not `undefined`
-                reason?: DeepPropertyUnreachableReason;
                 // whether one type contains effective optional chian(both nullable and optional chain)
                 // This is especially important when narrow condition is equal to undefined, as a result of optional chain.
                 containsEffectiveOptionalChain: boolean;
@@ -22979,12 +22909,7 @@ namespace ts {
                     }
                 });
 
-                if (some(propertyTypeArray, t => t.reason === DeepPropertyUnreachableReason.Error2339)) {
-                    return undefined;
-                }
-                else {
-                    return propertyTypeArray;
-                }
+                return propertyTypeArray;
 
                 // If expression is a, return []
                 // If expression is a.b["c"].d(), return ["b","c","d"]
@@ -23009,74 +22934,50 @@ namespace ts {
                     }
                 }
 
-                function getPropertyTypeFromTypeAccordingToPath(nonUntionType: Type, paths: PathInfo[], isCallExpression: boolean): NarrowDeepPropertyInfo {
-                    const result: NarrowDeepPropertyInfo = {
-                        typeId: nonUntionType.id,
-                        finalType: undefined,
-                        containsEffectiveOptionalChain: false
-                    };
-
-                    const pathsLength = paths.length;
-
-                    if (paths.length === 0) {
-                        result.finalType = nonUntionType;
-                        return result;
-                    }
-
-                    let curType = nonUntionType;
-                    for (let i = 0; i < pathsLength; i++) {
-                        const path = paths[i].path;
-                        const isEffectiveOptionalChain = strictNullChecks && paths[i].isOptionalChain && maybeTypeOfKind(curType, TypeFlags.Nullable);
+                function getPropertyTypeFromTypeAccordingToPath(nonUnionType: Type, pathInfos: PathInfo[], isCallExpression: boolean): NarrowDeepPropertyInfo | undefined {
+                    let propType: Type | undefined = nonUnionType;
+                    const typeId = nonUnionType.id;
+                    let containsEffectiveOptionalChain = false;
+                    for (const pathInfo of pathInfos) {
+                        const path = pathInfo.path;
+                        const isEffectiveOptionalChain = strictNullChecks && pathInfo.isOptionalChain && maybeTypeOfKind(propType, TypeFlags.Nullable);
                         if(isEffectiveOptionalChain){
-                            result.containsEffectiveOptionalChain = true;
+                            containsEffectiveOptionalChain = true;
                         }
-                        const nonNullableTypeIfStrict = getNonNullableTypeIfNeeded(curType);
-                        let type: Type;
+                        if (propType.flags & TypeFlags.Nullable) {
+                            return { typeId, finalType: undefined, containsEffectiveOptionalChain};
+                        }
+                        const nonNullableTypeIfStrict = getNonNullableTypeIfNeeded(propType);
                         if (nonNullableTypeIfStrict.flags & TypeFlags.UnionOrIntersection) {
                             // although getTypeOfPropertyOfType use getPropertyOfUnionOrIntersectionType, but in getReducedApparentType
                             // intersection type that contains mutually exclusive discriminant properties returns never.
                             const prop = getPropertyOfUnionOrIntersectionType(<UnionOrIntersectionType>nonNullableTypeIfStrict, path);
-                            type = prop ? getTypeOfSymbol(prop) : unknownType; // unknownType is to keep coninstance with the return value of getTypeOfPropertyOrIndexSignature
+                            propType = prop && getTypeOfSymbol(prop); // unknownType is to keep coninstance with the return value of getTypeOfPropertyOrIndexSignature
                         }
                         else {
-                            type = getTypeOfPropertyOrIndexSignature(nonNullableTypeIfStrict, path);
+                            propType = getTypeOfPropertyOrIndexSignature(nonNullableTypeIfStrict, path);
                         }
 
-                        if (type === unknownType) {
-                            result.reason = getReasonOfUnreachableType(curType);
-                            break;
+                        if (!propType) {
+                            return undefined;
                         }
-
-                        if (i === pathsLength - 1) {
-                            result.finalType = type;
-                            break;
-                        }
-                        curType = type;
                     }
 
                     // here could be improved, now, we access all return type for the signature, but it could use parameter to get reduced return types.
-                    if (isCallExpression) {
-                        if (!result) {
-                            return result;
-                        }
-                        if (result.finalType && result.finalType.flags & TypeFlags.Object) {
-                            const returnTypes = (<ObjectType>result.finalType).callSignatures?.map(getReturnTypeOfSignature);
-                            // In which condition could returnTypes be undefined?
-                            if (returnTypes) {
-                                result.finalType = getUnionType(returnTypes);
-                            }
-                        }
+                    if (isCallExpression && propType && propType.flags & TypeFlags.Object) {
+                        const returnTypes = (propType as ObjectType).callSignatures?.map(getReturnTypeOfSignature);
+                        return returnTypes && {
+                            typeId,
+                            finalType: getUnionType(returnTypes),
+                            containsEffectiveOptionalChain
+                        };
                     }
 
-                    return result;
-
-                    function getReasonOfUnreachableType(t: Type) {
-                        return isTypeOnlyNullable(t) ? DeepPropertyUnreachableReason.OnlyNullableOnPath :
-                            (t.flags & TypeFlags.Never) ? DeepPropertyUnreachableReason.OnlyNeverOnPath : DeepPropertyUnreachableReason.Error2339;
-                    }
-                    function isTypeOnlyNullable(t: Type) {
-                        return !!(t.flags & TypeFlags.Nullable) && !(t.flags & (TypeFlags.Primitive ^ TypeFlags.Nullable));
-                    }
+                    return {
+                        typeId,
+                        finalType: propType,
+                        containsEffectiveOptionalChain
+                    };
                 }
             }
 
