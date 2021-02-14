@@ -22985,8 +22985,6 @@ namespace ts {
                     return propertyTypeArray;
                 }
 
-
-                
                 // If expression is a, return []
                 // If expression is a.b["c"].d(), return ["b","c","d"]
                 // NOTE: If element expression is not known in compile progress like a.b[f()].d, the result would be undefined
