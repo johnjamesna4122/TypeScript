@@ -22628,8 +22628,7 @@ namespace ts {
                 if (!propertyTypeArray) {
                     return false;
                 }
-
-                const reachableFinalType = (propertyTypeArray.filter(t => t.finalType !== undefined).map(t => t.finalType) as Type[]);
+                const reachableFinalType = mapDefined(propertyTypeArray, t => t.finalType);
                 const rootNullable: Type[] = (computedType.flags & TypeFlags.Union) ? (<UnionType>computedType).types.filter(t => t.id === undefinedType.id || t.id === nullType.id) : [];
 
                 if (propertyTypeArray.some(t =>
@@ -22731,7 +22730,7 @@ namespace ts {
                 if (!propertyTypeArray) {
                     return type;
                 }
-                const reachableFinalType = (propertyTypeArray.filter(t => t.finalType !== undefined).map(t => t.finalType) as Type[]);
+                const reachableFinalType = mapDefined(propertyTypeArray, t => t.finalType);
                 const containsEffectiveOptionalChainTypes = propertyTypeArray.filter(t => t.containsEffectiveOptionalChain);
                 const subtypes: Type[] = [];
                 forEach(reachableFinalType, propType => {
@@ -22968,15 +22967,17 @@ namespace ts {
                 // for case 1, create `type X = A|C`, it should be filtered through optional chain, and not cause any error although A.a does not have any inner type. Like `root.a?.innerType` is valid.
                 // for case 2, it is similar, and we do not even need optional chain. Like `root.a.innerType`
 
-                let propertyTypeArray: NarrowDeepPropertyInfo[] = [];
-                if (type.flags & TypeFlags.Union) {
-                    propertyTypeArray = (<UnionType>type).types.map(type => getPropertyTypeFromTypeAccordingToPath(type, propertyPaths, callExpressionFlag));
-                }
-                else {
-                    propertyTypeArray = [getPropertyTypeFromTypeAccordingToPath(type, propertyPaths, callExpressionFlag)];
-                }
-
-                Debug.assert(propertyTypeArray.every(i => (i.finalType !== undefined && i.reason === undefined) || (i.finalType === undefined && i.reason !== undefined))); // one and only one is `undefined`.
+                let propertyTypeArray: NarrowDeepPropertyInfo[] | undefined;
+                forEachType(type, t => {
+                    const propType = getPropertyTypeFromTypeAccordingToPath(t, propertyPaths, callExpressionFlag);
+                    if (propType) {
+                        propertyTypeArray = append(propertyTypeArray, propType);
+                    }
+                    else {
+                        propertyTypeArray = undefined;
+                        return true;
+                    }
+                });
 
                 if (some(propertyTypeArray, t => t.reason === DeepPropertyUnreachableReason.Error2339)) {
                     return undefined;
@@ -22989,47 +22990,21 @@ namespace ts {
                 // If expression is a.b["c"].d(), return ["b","c","d"]
                 // NOTE: If element expression is not known in compile progress like a.b[f()].d, the result would be undefined
                 // //NOTE: this function need improvement, ElementAccessExpression argument might could be known in compile time, like "1"+"2", we should check "12" in the path, but how to get the value?
-                function tryGetPropertyPathsOfReferenceFromExpression(expressionOri: Expression, ref?: Node) {
-                    const depth = getTypeDepthIfMatch(expressionOri, ref);
-                    if (depth && depth < 0) {
-                        return undefined;
-                    }
-                    const propertyPaths = getPropertyPathsOfAccessExpressionWithDepthLimit(expressionOri, depth);
-                    return propertyPaths;
-
-                    /**
-                     * @returns return undefined means ref is not provided, return -1 means not matched
-                     */
-                    function getTypeDepthIfMatch(expression: Expression, ref?: Node): number | undefined {
-                        if (!ref) {
+                function tryGetPropertyPathsOfReferenceFromExpression(expressionOri: Expression, reference: Node): PathInfo[] | undefined {
+                    const properties = [];
+                    let expr: Expression = expressionOri;
+                    while (isAccessExpression(expr)) {
+                        if (isMatchingReference(reference, expr)) {
+                            return properties;
+                        }
+                        const propName = getAccessedPropertyName(expr);
+                        if (!propName) {
                             return undefined;
                         }
-                        let result = 0;
-                        let expr = expression;
-                        if (isMatchingReference(ref, expr)) {
-                            return result;
-                        }
-                        while (isAccessExpression(expr)) {
-                            result = result + 1;
-                            expr = expr.expression;
-                            if (isMatchingReference(ref, expr)) {
-                                return result;
-                            }
-                        }
-                        return -1;
+                        properties.unshift({ path: propName, isOptionalChain: isOptionalChain(expr) });
+                        expr = expr.expression;
                     }
-
-                    function getPropertyPathsOfAccessExpressionWithDepthLimit(expressionOri: Expression, depth?: number): PathInfo[] | undefined {
-                        const properties: PathInfo[] = [];
-                        let expr: Expression = expressionOri;
-                        while (isAccessExpression(expr) && (!depth || properties.length !== depth)) {
-                            const propName = getAccessedPropertyName(expr);
-                            if (!propName) {
-                                return undefined;
-                            }
-                            properties.unshift({ path: propName, isOptionalChain: isOptionalChain(expr) });
-                            expr = expr.expression;
-                        }
+                    if (isMatchingReference(reference, expr)) {
                         return properties;
                     }
                 }
@@ -23103,7 +23078,6 @@ namespace ts {
                         return !!(t.flags & TypeFlags.Nullable) && !(t.flags & (TypeFlags.Primitive ^ TypeFlags.Nullable));
                     }
                 }
-
             }
 
             function narrowTypeByTypeof(type: Type, typeOfExpr: TypeOfExpression, operator: SyntaxKind, literal: LiteralExpression, assumeTrue: boolean): Type {
