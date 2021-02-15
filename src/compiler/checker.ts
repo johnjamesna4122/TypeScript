@@ -22671,6 +22671,9 @@ namespace ts {
                      *       }
                      *   }
                      */
+                    if (!(declaredType.flags & TypeFlags.Union)) {
+                        return false;
+                    }
                     if ((<UnionType>declaredType).types.filter(t => !(t.flags & TypeFlags.Primitive)).length < 2) {
                         return false;    // to pass condition 2.
                     }
@@ -22691,7 +22694,7 @@ namespace ts {
                     //         }
                     //     }
                     // }
-                    return declaredType.flags & TypeFlags.Union;
+                    return true;
                 }
 
                 return areTypesDiscriminable(reachableFinalType);
