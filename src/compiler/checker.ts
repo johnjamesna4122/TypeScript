@@ -22624,25 +22624,80 @@ namespace ts {
                 if (!isAccessExpression(expr)) {
                     return false;
                 }
-                const propertyTypeArray = getPropertyTypesFromTypeAccordingToExpression(computedType, expr);
-                if (!propertyTypeArray) {
+                const propertyTypeInfo = getPropertyTypesFromTypeAccordingToExpression(computedType, expr);
+                if (!propertyTypeInfo) {
                     return false;
                 }
-                const reachableFinalType = mapDefined(propertyTypeArray, t => t.finalType);
+                const reachableFinalType = mapDefined(propertyTypeInfo, t => t.finalType);
                 const rootNullable: Type[] = (computedType.flags & TypeFlags.Union) ? (<UnionType>computedType).types.filter(t => t.id === undefinedType.id || t.id === nullType.id) : [];
 
-                if (reachableFinalType.length < propertyTypeArray.length && !some(rootNullable, t => some(propertyTypeArray, info => info.typeId === t.id))) {
+                if (reachableFinalType.length < propertyTypeInfo.length && !some(rootNullable, t => some(propertyTypeInfo, info => info.typeId === t.id))) {
                     return true;
                 }
 
                 if (!(computedType.flags & TypeFlags.Union)) {
-                    return !!(declaredType.flags & TypeFlags.Union);
+                    // Whether we fall back to the declared type depends entirely on how
+                    // the type could be subsequently narrowed.
+                    /**
+                     * Condition 1: computed type is not union any more.
+                     *  // omit the defination, which is easy to be infered through code and intention
+                     *  function foo(x: A | B): any {
+                     *       x;  // A | B
+                     *       if ( 'A' === x.type ) { // first trigger
+                     *           return x;  // A
+                     *       }
+                     *       x;  // B
+                     *       if ('B' === x.type) {  // second trigger
+                     *           return x;  // B
+                     *       }
+                     *       x;  // In the second time narrowing, the computed type would only have one(not Union), but should still be triggered to narrow type to never.
+                     *   }
+                     */
+                    // use declaredType is a quick way to resolve issue above -- when computed type is not union, the declared type is not chagned.
+                    // But it also bring some other issue, like #39114 and #39110. As long as the declared type is not proper, issues come.
+
+                    // and only declared union is too loose to judge it could be narrowed.
+                    /**
+                     * Condition 2: Index type with undefined/null
+                     *   function ffff1() {
+                     *       let a: Array<number>|undefined;
+                     *       a = [1];
+                     *       if(a){
+                     *           if (a[2] !== undefined) {
+                     *               a[1];
+                     *           } else {
+                     *               a[2];  // declared type is union, but here should not be narrowed to never.
+                     *           }
+                     *       }
+                     *   }
+                     */
+                    if ((<UnionType>declaredType).types.filter(t => !(t.flags & TypeFlags.Primitive)).length < 2) {
+                        return false;    // to pass condition 2.
+                    }
+                    // However, I still use declared type, and put it here. The main aim is for future improving.
+                    // We could deal with 'this' type and use ugly code to deal with Condition 2, then we could avoid use declared type at least for now
+                    // passing all tests and issue #39110/#39114, but does it deserve? Is the code clear enough?
+
+                    // if(isThisTypeParameter(computedType)){
+                    //     return false;
+                    // }
+                    // if(isElementAccessExpression(expr)){
+                    //     // the only purpose of these code is to omit above condition 2.
+                    //     const type = getReducedApparentType(computedType);
+                    //     if (type.flags & TypeFlags.Object) {
+                    //         const resolved = resolveStructuredTypeMembers(<ObjectType>type);
+                    //         if(resolved.stringIndexInfo || resolved.numberIndexInfo){
+                    //             return false;
+                    //         }
+                    //     }
+                    // }
+                    return declaredType.flags & TypeFlags.Union;
                 }
 
-                return isTypeArrayDiscriminant(reachableFinalType);
+                return areTypesDiscriminable(reachableFinalType);
 
                 // main part is copied from function createUnionOrIntersectionProperty
-                function isTypeArrayDiscriminant(types: Type[]) {
+                function areTypesDiscriminable(types: Type[]) {
                     let checkFlags = 0;
                     let firstType: Type | undefined;
                     for (const type of types) {
@@ -22934,9 +22989,9 @@ namespace ts {
                     }
                 }
 
-                function getPropertyTypeFromTypeAccordingToPath(nonUnionType: Type, pathInfos: PathInfo[], isCallExpression: boolean): NarrowDeepPropertyInfo | undefined {
-                    let propType: Type | undefined = nonUnionType;
-                    const typeId = nonUnionType.id;
+                function getPropertyTypeFromTypeAccordingToPath(constituentType: Type, pathInfos: PathInfo[], isCallExpression: boolean): NarrowDeepPropertyInfo | undefined {
+                    let propType: Type | undefined = constituentType;
+                    const typeId = constituentType.id;
                     let containsEffectiveOptionalChain = false;
                     for (const pathInfo of pathInfos) {
                         const path = pathInfo.path;
@@ -22992,7 +23047,7 @@ namespace ts {
                 const target = getReferenceCandidate(typeOfExpr.expression);
                 if (!isMatchingReference(reference, target)) {
                     if (type.flags & TypeFlags.Union) {
-                        const propertyTypeArray = getPropertyTypesFromTypeAccordingToExpression(<UnionType>type, typeOfExpr.expression);
+                        const propertyTypes = getPropertyTypesFromTypeAccordingToExpression(<UnionType>type, typeOfExpr.expression);
                         let strongConstrict = false;
                         // ~undefined means other values except undefiend. boolean, bigint....
                         if ((assumeTrue && literal.text !== "undefined") || (!assumeTrue && literal.text === "undefined")) {
@@ -23000,12 +23055,12 @@ namespace ts {
                             // always use full expression to narrow
                             strongConstrict = true;
                         }
-                        if (!propertyTypeArray) {
+                        if (!propertyTypes) {
                             return type;
                         }
                         const markSet = new Set<TypeId>();
 
-                        propertyTypeArray.forEach(propertyType => {
+                        propertyTypes.forEach(propertyType => {
                             if (!propertyType.finalType && !propertyType.containsEffectiveOptionalChain) { return; }
                             const reachableFinalType = propertyType.finalType;
                             if (propertyType.containsEffectiveOptionalChain && !strongConstrict) {
