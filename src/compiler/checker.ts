@@ -22999,11 +22999,11 @@ namespace ts {
                     for (const pathInfo of pathInfos) {
                         const path = pathInfo.path;
                         const isEffectiveOptionalChain = strictNullChecks && pathInfo.isOptionalChain && maybeTypeOfKind(propType, TypeFlags.Nullable);
-                        if(isEffectiveOptionalChain){
+                        if (isEffectiveOptionalChain) {
                             containsEffectiveOptionalChain = true;
                         }
                         if (propType.flags & TypeFlags.Nullable) {
-                            return { typeId, finalType: undefined, containsEffectiveOptionalChain};
+                            return { typeId, finalType: undefined, containsEffectiveOptionalChain };
                         }
                         const nonNullableTypeIfStrict = getNonNullableTypeIfNeeded(propType);
                         if (nonNullableTypeIfStrict.flags & TypeFlags.UnionOrIntersection) {
@@ -23051,13 +23051,7 @@ namespace ts {
                 if (!isMatchingReference(reference, target)) {
                     if (type.flags & TypeFlags.Union) {
                         const propertyTypes = getPropertyTypesFromTypeAccordingToExpression(<UnionType>type, typeOfExpr.expression);
-                        let strongConstrict = false;
-                        // ~undefined means other values except undefiend. boolean, bigint....
-                        if ((assumeTrue && literal.text !== "undefined") || (!assumeTrue && literal.text === "undefined")) {
-                            // !== undefined, === ~undefined
-                            // always use full expression to narrow
-                            strongConstrict = true;
-                        }
+                        const impliedUndefined = (assumeTrue && literal.text === "undefined") || (!assumeTrue && literal.text !== "undefined");
                         if (!propertyTypes) {
                             return type;
                         }
@@ -23066,7 +23060,7 @@ namespace ts {
                         propertyTypes.forEach(propertyType => {
                             if (!propertyType.finalType && !propertyType.containsEffectiveOptionalChain) { return; }
                             const reachableFinalType = propertyType.finalType;
-                            if (propertyType.containsEffectiveOptionalChain && !strongConstrict) {
+                            if (propertyType.containsEffectiveOptionalChain && impliedUndefined) {
                                 markSet.add(propertyType.typeId);
                             }
                             else if (!!reachableFinalType) {
@@ -23240,32 +23234,23 @@ namespace ts {
                     }
                     return getTypeWithFacts(mapType(type, narrowUnionMemberByTypeof(impliedType)), switchFacts);
                 }
-                let strongConstrict = false;
-                const facts = switchFacts;
+                const impliedUndefined = !(switchFacts & 0b111111 && !(switchFacts & TypeFacts.EQUndefined) || (switchFacts & TypeFacts.NEUndefined));
                 const propertyTypeArray = getPropertyTypesFromTypeAccordingToExpression(<UnionType>type, expr);
 
-                if ((facts & 0b111111 && !(facts & TypeFacts.EQUndefined) || (facts & TypeFacts.NEUndefined))) {
-                    // not contains 'undefiend'
-                    // use full expression to narrow
-                    strongConstrict = true;
-                }
                 if (!propertyTypeArray) {
                     return type;
                 }
-                // const secondFacts = strongConstrict ? TypeFacts.NEUndefinedOrNull : TypeFacts.None;
                 const markSet = new Set<TypeId>();
-
-                // propertyTypeArray = propertyTypeArray.concat([{ tyepeId: undefinedType.id, finalType: undefinedType }, { tyepeId: nullType.id, finalType: nullType }]);
 
                 propertyTypeArray.forEach(propertyType => {
                     if (!propertyType.finalType && !propertyType.containsEffectiveOptionalChain) { return; }
                     const reachableFinalType = propertyType.finalType;
-                    if (propertyType.containsEffectiveOptionalChain && !strongConstrict) {
+                    if (propertyType.containsEffectiveOptionalChain && impliedUndefined) {
                         markSet.add(propertyType.typeId);
                     }
                     else if (!!reachableFinalType) {
                         const propertyTypeFacts = getTypeFacts(reachableFinalType);
-                        if (!hasDefaultClause ? propertyTypeFacts & facts : ((propertyTypeFacts & facts) === facts)) {
+                        if (!hasDefaultClause ? propertyTypeFacts & switchFacts : ((propertyTypeFacts & switchFacts) === switchFacts)) {
                             markSet.add(propertyType.typeId);
                         }
                     }
