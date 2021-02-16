@@ -80,28 +80,29 @@ type Union2 = Foo1 | Foo2;
 >Foo1 : Symbol(Foo1, Decl(typeGuardAccordingToPropertyDeepBySwitch.ts, 0, 0))
 >Foo2 : Symbol(Foo2, Decl(typeGuardAccordingToPropertyDeepBySwitch.ts, 6, 1))
 
+// fall through
 function f2(u: Union2) {
 >f2 : Symbol(f2, Decl(typeGuardAccordingToPropertyDeepBySwitch.ts, 34, 26))
->u : Symbol(u, Decl(typeGuardAccordingToPropertyDeepBySwitch.ts, 36, 12))
+>u : Symbol(u, Decl(typeGuardAccordingToPropertyDeepBySwitch.ts, 37, 12))
 >Union2 : Symbol(Union2, Decl(typeGuardAccordingToPropertyDeepBySwitch.ts, 32, 1))
 
     switch (typeof u.inner["secondKey"]) {
 >u.inner : Symbol(inner, Decl(typeGuardAccordingToPropertyDeepBySwitch.ts, 1, 21), Decl(typeGuardAccordingToPropertyDeepBySwitch.ts, 9, 22))
->u : Symbol(u, Decl(typeGuardAccordingToPropertyDeepBySwitch.ts, 36, 12))
+>u : Symbol(u, Decl(typeGuardAccordingToPropertyDeepBySwitch.ts, 37, 12))
 >inner : Symbol(inner, Decl(typeGuardAccordingToPropertyDeepBySwitch.ts, 1, 21), Decl(typeGuardAccordingToPropertyDeepBySwitch.ts, 9, 22))
 >"secondKey" : Symbol(secondKey, Decl(typeGuardAccordingToPropertyDeepBySwitch.ts, 2, 12), Decl(typeGuardAccordingToPropertyDeepBySwitch.ts, 10, 12))
 
         case 'boolean':
-            u;
->u : Symbol(u, Decl(typeGuardAccordingToPropertyDeepBySwitch.ts, 36, 12))
+            u;  // never
+>u : Symbol(u, Decl(typeGuardAccordingToPropertyDeepBySwitch.ts, 37, 12))
 
         case 'bigint':
-            u;
->u : Symbol(u, Decl(typeGuardAccordingToPropertyDeepBySwitch.ts, 36, 12))
+            u;  // Foo2
+>u : Symbol(u, Decl(typeGuardAccordingToPropertyDeepBySwitch.ts, 37, 12))
 
         default:
-            u;
->u : Symbol(u, Decl(typeGuardAccordingToPropertyDeepBySwitch.ts, 36, 12))
+            u;  // Union2
+>u : Symbol(u, Decl(typeGuardAccordingToPropertyDeepBySwitch.ts, 37, 12))
     }
 }
 

@@ -76,6 +76,7 @@ function f(u: Union) {
 type Union2 = Foo1 | Foo2;
 >Union2 : Union2
 
+// fall through
 function f2(u: Union2) {
 >f2 : (u: Union2) => void
 >u : Union2
@@ -91,17 +92,17 @@ function f2(u: Union2) {
         case 'boolean':
 >'boolean' : "boolean"
 
-            u;
+            u;  // never
 >u : Foo2
 
         case 'bigint':
 >'bigint' : "bigint"
 
-            u;
+            u;  // Foo2
 >u : Foo2
 
         default:
-            u;
+            u;  // Union2
 >u : Union2
     }
 }

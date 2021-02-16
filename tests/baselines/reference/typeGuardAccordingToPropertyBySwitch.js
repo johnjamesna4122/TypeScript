@@ -58,13 +58,13 @@ type Union2 = Boolean1 | BigInt1 | Number1 | String1 | Symbol1 | Undefined1 | Fu
 function f1_1(u: Union1) {
     switch (typeof u.key) {
         case 'boolean':
-            u.n1;
+            u;    // Boolean1 | Boolean2
             break;
         case 'number':
-            u.n1;
+            u;    // Number1
             break;
         default:
-            u.n1;
+            u;    // never
             break;
     }
 }
@@ -72,10 +72,10 @@ function f1_1(u: Union1) {
 function f1_2(u: Union1) {
     switch (typeof u.key) {
         case 'boolean':
-            u.n1;
+            u;    // Boolean1 | Boolean2
             break;
         default:
-            u.n1;
+            u;    // Number1
             break;
     }
 }
@@ -92,28 +92,28 @@ function f1ElementAccess_1(u: Union1) {
 function f2_1(u: Union2) {
     switch (typeof u.key) {
         case 'bigint':
-            u.bi1;
+            u;  // Bigint1
             break;
         case 'boolean':
-            u.b1;
+            u;  // Boolean1
             break;
         case 'number':
-            u.n1;
+            u;  // Number1
             break;
         case 'string':
-            u.st1;
+            u;  // String1
             break;
         case 'symbol':
-            u.sy1;
+            u;  // Symbol1
             break;
         case 'undefined':
-            u.u1;
+            u;  // Undefined1
             break;
         case 'function':
-            u.f1;
+            u;  // Function1
             break;
         case 'object':
-            u.o1;
+            u;  // Object1
             break;
     }
 }
@@ -124,13 +124,13 @@ function f2_2(u: Union2) {
         case 'boolean':
         case 'number':
         case 'string':
-            u;
+            u;  // Boolean1 | Number1 | BigInt1 | String1
             break;
         case 'symbol':
         case 'undefined':
         case 'function':
         case 'object':
-            u;
+            u;   // Symbol1 | Undefined1 | Function1 | Obejct1
             break;
     }
 }
@@ -141,10 +141,10 @@ function f2_3(u: Union2) {
         case 'boolean':
         case 'number':
         case 'string':
-            u;
+            u;  // Boolean1 | Number1 | BigInt1 | String1
             break;
         default:
-            u;
+            u;  // Symbol1 | Undefined1 | Function1 | Obejct1
             break;
     }
 }
@@ -155,10 +155,10 @@ function f2_4(u: Union2) {
         case 'undefined':
         case 'function':
         case 'object':
-            u;
+            u;  // Symbol1 | Undefined1 | Function1 | Obejct1
             break;
         default:
-            u;
+            u;  // Boolean1 | BigInt1 | Number1 | String1
             break;
     }
 }
@@ -190,23 +190,23 @@ function f3(bar: X) {
 function f1_1(u) {
     switch (typeof u.key) {
         case 'boolean':
-            u.n1;
+            u; // Boolean1 | Boolean2
             break;
         case 'number':
-            u.n1;
+            u; // Number1
             break;
         default:
-            u.n1;
+            u; // never
             break;
     }
 }
 function f1_2(u) {
     switch (typeof u.key) {
         case 'boolean':
-            u.n1;
+            u; // Boolean1 | Boolean2
             break;
         default:
-            u.n1;
+            u; // Number1
             break;
     }
 }
@@ -220,28 +220,28 @@ function f1ElementAccess_1(u) {
 function f2_1(u) {
     switch (typeof u.key) {
         case 'bigint':
-            u.bi1;
+            u; // Bigint1
             break;
         case 'boolean':
-            u.b1;
+            u; // Boolean1
             break;
         case 'number':
-            u.n1;
+            u; // Number1
             break;
         case 'string':
-            u.st1;
+            u; // String1
             break;
         case 'symbol':
-            u.sy1;
+            u; // Symbol1
             break;
         case 'undefined':
-            u.u1;
+            u; // Undefined1
             break;
         case 'function':
-            u.f1;
+            u; // Function1
             break;
         case 'object':
-            u.o1;
+            u; // Object1
             break;
     }
 }
@@ -251,13 +251,13 @@ function f2_2(u) {
         case 'boolean':
         case 'number':
         case 'string':
-            u;
+            u; // Boolean1 | Number1 | BigInt1 | String1
             break;
         case 'symbol':
         case 'undefined':
         case 'function':
         case 'object':
-            u;
+            u; // Symbol1 | Undefined1 | Function1 | Obejct1
             break;
     }
 }
@@ -267,10 +267,10 @@ function f2_3(u) {
         case 'boolean':
         case 'number':
         case 'string':
-            u;
+            u; // Boolean1 | Number1 | BigInt1 | String1
             break;
         default:
-            u;
+            u; // Symbol1 | Undefined1 | Function1 | Obejct1
             break;
     }
 }
@@ -280,10 +280,10 @@ function f2_4(u) {
         case 'undefined':
         case 'function':
         case 'object':
-            u;
+            u; // Symbol1 | Undefined1 | Function1 | Obejct1
             break;
         default:
-            u;
+            u; // Boolean1 | BigInt1 | Number1 | String1
             break;
     }
 }

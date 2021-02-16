@@ -104,26 +104,20 @@ function f1_1(u: Union1) {
         case 'boolean':
 >'boolean' : "boolean"
 
-            u.n1;
->u.n1 : any
+            u;    // Boolean1 | Boolean2
 >u : Boolean1 | Boolean2
->n1 : any
 
             break;
         case 'number':
 >'number' : "number"
 
-            u.n1;
->u.n1 : number
+            u;    // Number1
 >u : Number1
->n1 : number
 
             break;
         default:
-            u.n1;
->u.n1 : any
+            u;    // never
 >u : never
->n1 : any
 
             break;
     }
@@ -142,17 +136,13 @@ function f1_2(u: Union1) {
         case 'boolean':
 >'boolean' : "boolean"
 
-            u.n1;
->u.n1 : any
+            u;    // Boolean1 | Boolean2
 >u : Boolean1 | Boolean2
->n1 : any
 
             break;
         default:
-            u.n1;
->u.n1 : number
+            u;    // Number1
 >u : Number1
->n1 : number
 
             break;
     }
@@ -195,73 +185,57 @@ function f2_1(u: Union2) {
         case 'bigint':
 >'bigint' : "bigint"
 
-            u.bi1;
->u.bi1 : number
+            u;  // Bigint1
 >u : BigInt1
->bi1 : number
 
             break;
         case 'boolean':
 >'boolean' : "boolean"
 
-            u.b1;
->u.b1 : number
+            u;  // Boolean1
 >u : Boolean1
->b1 : number
 
             break;
         case 'number':
 >'number' : "number"
 
-            u.n1;
->u.n1 : number
+            u;  // Number1
 >u : Number1
->n1 : number
 
             break;
         case 'string':
 >'string' : "string"
 
-            u.st1;
->u.st1 : number
+            u;  // String1
 >u : String1
->st1 : number
 
             break;
         case 'symbol':
 >'symbol' : "symbol"
 
-            u.sy1;
->u.sy1 : number
+            u;  // Symbol1
 >u : Symbol1
->sy1 : number
 
             break;
         case 'undefined':
 >'undefined' : "undefined"
 
-            u.u1;
->u.u1 : number
+            u;  // Undefined1
 >u : Undefined1
->u1 : number
 
             break;
         case 'function':
 >'function' : "function"
 
-            u.f1;
->u.f1 : number
+            u;  // Function1
 >u : Function1
->f1 : number
 
             break;
         case 'object':
 >'object' : "object"
 
-            u.o1;
->u.o1 : number
+            u;  // Object1
 >u : Obejct1
->o1 : number
 
             break;
     }
@@ -289,7 +263,7 @@ function f2_2(u: Union2) {
         case 'string':
 >'string' : "string"
 
-            u;
+            u;  // Boolean1 | Number1 | BigInt1 | String1
 >u : Boolean1 | BigInt1 | Number1 | String1
 
             break;
@@ -305,7 +279,7 @@ function f2_2(u: Union2) {
         case 'object':
 >'object' : "object"
 
-            u;
+            u;   // Symbol1 | Undefined1 | Function1 | Obejct1
 >u : Symbol1 | Undefined1 | Function1 | Obejct1
 
             break;
@@ -334,12 +308,12 @@ function f2_3(u: Union2) {
         case 'string':
 >'string' : "string"
 
-            u;
+            u;  // Boolean1 | Number1 | BigInt1 | String1
 >u : Boolean1 | BigInt1 | Number1 | String1
 
             break;
         default:
-            u;
+            u;  // Symbol1 | Undefined1 | Function1 | Obejct1
 >u : Symbol1 | Undefined1 | Function1 | Obejct1
 
             break;
@@ -368,12 +342,12 @@ function f2_4(u: Union2) {
         case 'object':
 >'object' : "object"
 
-            u;
+            u;  // Symbol1 | Undefined1 | Function1 | Obejct1
 >u : Symbol1 | Undefined1 | Function1 | Obejct1
 
             break;
         default:
-            u;
+            u;  // Boolean1 | BigInt1 | Number1 | String1
 >u : Boolean1 | BigInt1 | Number1 | String1
 
             break;

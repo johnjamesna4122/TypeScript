@@ -28,7 +28,7 @@ function f(u: Union) {
     if (typeof u.firstKey === "number" || typeof u.firstKey === "boolean") {
         u;  // Foo1 | Foo2
         if (typeof u.inner.secondKey === "boolean") {
-            u;
+            u;  // Foo2
         }
     }
 }
@@ -62,7 +62,7 @@ function f(u) {
     if (typeof u.firstKey === "number" || typeof u.firstKey === "boolean") {
         u; // Foo1 | Foo2
         if (typeof u.inner.secondKey === "boolean") {
-            u;
+            u; // Foo2
         }
     }
 }

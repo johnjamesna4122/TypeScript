@@ -72,7 +72,7 @@ function f(u: Union) {
 >secondKey : number | boolean
 >"boolean" : "boolean"
 
-            u;
+            u;  // Foo2
 >u : Foo2
         }
     }

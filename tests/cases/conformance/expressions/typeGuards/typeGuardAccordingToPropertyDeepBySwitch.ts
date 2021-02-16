@@ -36,13 +36,14 @@ function f(u: Union) {
 
 type Union2 = Foo1 | Foo2;
 
+// fall through
 function f2(u: Union2) {
     switch (typeof u.inner["secondKey"]) {
         case 'boolean':
-            u;
+            u;  // never
         case 'bigint':
-            u;
+            u;  // Foo2
         default:
-            u;
+            u;  // Union2
     }
 }

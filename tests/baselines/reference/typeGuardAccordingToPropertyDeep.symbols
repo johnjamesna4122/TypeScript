@@ -72,7 +72,7 @@ function f(u: Union) {
 >inner : Symbol(inner, Decl(typeGuardAccordingToPropertyDeep.ts, 4, 21), Decl(typeGuardAccordingToPropertyDeep.ts, 12, 22))
 >secondKey : Symbol(secondKey, Decl(typeGuardAccordingToPropertyDeep.ts, 5, 12), Decl(typeGuardAccordingToPropertyDeep.ts, 13, 12))
 
-            u;
+            u;  // Foo2
 >u : Symbol(u, Decl(typeGuardAccordingToPropertyDeep.ts, 25, 11))
         }
     }
