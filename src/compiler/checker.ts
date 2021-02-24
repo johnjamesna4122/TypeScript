@@ -3695,7 +3695,7 @@ namespace ts {
                     return forEachEntry(t, s => {
                         if (s.flags & getQualifiedLeftMeaning(meaning) && getTypeOfSymbol(s) === getDeclaredTypeOfSymbol(container)) {
                             return s;
-            }
+                        }
                     });
                 }) : undefined;
                 let res = firstVariableMatch ? [firstVariableMatch, ...additionalContainers, container] : [...additionalContainers, container];
@@ -9257,9 +9257,9 @@ namespace ts {
                         return (node as JSDoc).tags
                             ? appendTypeParameters(outerTypeParameters, flatMap((node as JSDoc).tags, t => isJSDocTemplateTag(t) ? t.typeParameters : undefined))
                             : outerTypeParameters;
+                    }
                 }
             }
-        }
         }
 
         // The outer type parameters are those defined by enclosing generic classes, methods, or functions.
@@ -12254,7 +12254,7 @@ namespace ts {
                 // This way any noncircular interdependent type parameters are definitely resolved to their external dependencies
                 for (let i = 0; i < typeParameters.length - 1; i++) {
                     baseConstraints = instantiateTypes(baseConstraints, baseConstraintMapper);
-            }
+                }
                 // and then apply a type eraser to remove any remaining circularly dependent type parameters
                 baseConstraints = instantiateTypes(baseConstraints, typeEraser);
                 return signature.baseSignatureCache = instantiateSignature(signature, createTypeMapper(typeParameters, baseConstraints), /*eraseTypeParameters*/ true);
@@ -13548,8 +13548,8 @@ namespace ts {
                 const pred = getTypePredicateOfSignature(sig);
                 if (!pred || pred.kind === TypePredicateKind.AssertsThis || pred.kind === TypePredicateKind.AssertsIdentifier) {
                     if (kind !== TypeFlags.Intersection) {
-                    continue;
-                }
+                        continue;
+                    }
                     else {
                         return; // intersections demand all members be type predicates for the result to have a predicate
                     }
@@ -23228,9 +23228,11 @@ namespace ts {
                 }
 
                 /*
-                  The implied type is the raw type suggested by a value being caught in this clause.
+                  The implied type is the raw type suggested by a
+                  value being caught in this clause.
 
-                  When the clause contains a default case we ignore the implied type and try to narrow using any facts
+                  When the clause contains a default case we ignore
+                  the implied type and try to narrow using any facts
                   we can learn: see `switchFacts`.
 
                   Example:
@@ -23242,12 +23244,15 @@ namespace ts {
                       case 'boolean': break
                   }
 
-                  In the first clause (case `number` and `string`) the implied type is number | string.
+                  In the first clause (case `number` and `string`) the
+                  implied type is number | string.
 
                   In the default clause we de not compute an implied type.
 
-                  In the third clause (case `number` and `boolean`) the naive implied type is number | boolean, however
-                  we use the type facts to narrow the implied type to boolean. We know that number cannot be selected
+                  In the third clause (case `number` and `boolean`)
+                  the naive implied type is number | boolean, however
+                  we use the type facts to narrow the implied type to
+                  boolean. We know that number cannot be selected
                   because it is caught in the first clause.
                 */
                 const expr = (<TypeOfExpression>switchStatement.expression).expression;
@@ -25345,7 +25350,7 @@ namespace ts {
             const signatures = getSignaturesOfType(type, SignatureKind.Call);
             const applicableByArity = filter(signatures, s => !isAritySmaller(s, node));
             return applicableByArity.length === 1 ? applicableByArity[0] : getIntersectedSignatures(applicableByArity);
-                }
+        }
 
         /** If the contextual signature has fewer parameters than the function expression, do not use it */
         function isAritySmaller(signature: Signature, target: SignatureDeclaration) {
@@ -25567,7 +25572,7 @@ namespace ts {
                     !isTypeAssignableTo(links.resolvedType, stringNumberSymbolType)) {
                     error(node, Diagnostics.A_computed_property_name_must_be_of_type_string_number_symbol_or_any);
                 }
-                }
+            }
 
             return links.resolvedType;
         }
@@ -35298,7 +35303,7 @@ namespace ts {
                     return allowsStrings
                         ? [Diagnostics.Type_0_is_not_an_array_type_or_a_string_type_or_does_not_have_a_Symbol_iterator_method_that_returns_an_iterator, true]
                         : [Diagnostics.Type_0_is_not_an_array_type_or_does_not_have_a_Symbol_iterator_method_that_returns_an_iterator, true];
-        }
+                    }
 
                 const yieldType = getIterationTypeOfIterable(use, IterationTypeKind.Yield, inputType, /*errorNode*/ undefined);
 
