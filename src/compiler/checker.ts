@@ -22636,65 +22636,7 @@ namespace ts {
                 }
 
                 if (!(computedType.flags & TypeFlags.Union)) {
-                    // Whether we fall back to the declared type depends entirely on how
-                    // the type could be subsequently narrowed.
-                    /**
-                     * Condition 1: computed type is not union any more.
-                     *  // omit the defination, which is easy to be infered through code and intention
-                     *  function foo(x: A | B): any {
-                     *       x;  // A | B
-                     *       if ( 'A' === x.type ) { // first trigger
-                     *           return x;  // A
-                     *       }
-                     *       x;  // B
-                     *       if ('B' === x.type) {  // second trigger
-                     *           return x;  // B
-                     *       }
-                     *       x;  // In the second time narrowing, the computed type would only have one(not Union), but should still be triggered to narrow type to never.
-                     *   }
-                     */
-                    // use declaredType is a quick way to resolve issue above -- when computed type is not union, the declared type is not chagned.
-                    // But it also bring some other issue, like #39114 and #39110. As long as the declared type is not proper, issues come.
-
-                    // and only declared union is too loose to judge it could be narrowed.
-                    /**
-                     * Condition 2: Index type with undefined/null
-                     *   function ffff1() {
-                     *       let a: Array<number>|undefined;
-                     *       a = [1];
-                     *       if(a){
-                     *           if (a[2] !== undefined) {
-                     *               a[1];
-                     *           } else {
-                     *               a[2];  // declared type is union, but here should not be narrowed to never.
-                     *           }
-                     *       }
-                     *   }
-                     */
-                    if (!(declaredType.flags & TypeFlags.Union)) {
-                        return false;
-                    }
-                    if ((<UnionType>declaredType).types.filter(t => !(t.flags & TypeFlags.Primitive)).length < 2) {
-                        return false;    // to pass condition 2.
-                    }
-                    // However, I still use declared type, and put it here. The main aim is for future improving.
-                    // We could deal with 'this' type and use ugly code to deal with Condition 2, then we could avoid use declared type at least for now
-                    // passing all tests and issue #39110/#39114, but does it deserve? Is the code clear enough?
-
-                    // if(isThisTypeParameter(computedType)){
-                    //     return false;
-                    // }
-                    // if(isElementAccessExpression(expr)){
-                    //     // the only purpose of these code is to omit above condition 2.
-                    //     const type = getReducedApparentType(computedType);
-                    //     if (type.flags & TypeFlags.Object) {
-                    //         const resolved = resolveStructuredTypeMembers(<ObjectType>type);
-                    //         if(resolved.stringIndexInfo || resolved.numberIndexInfo){
-                    //             return false;
-                    //         }
-                    //     }
-                    // }
-                    return true;
+                    return !!(declaredType.flags & TypeFlags.Union);
                 }
 
                 return areTypesDiscriminable(reachableFinalType);
@@ -23234,7 +23176,7 @@ namespace ts {
                     }
                     return getTypeWithFacts(mapType(type, narrowUnionMemberByTypeof(impliedType)), switchFacts);
                 }
-                const impliedUndefined = !(switchFacts & 0b111111 && !(switchFacts & TypeFacts.EQUndefined) || (switchFacts & TypeFacts.NEUndefined));
+                const impliedUndefined = hasDefaultClause ? !(switchFacts & TypeFacts.NEUndefined) : (switchFacts & TypeFacts.EQUndefined);
                 const propertyTypeArray = getPropertyTypesFromTypeAccordingToExpression(<UnionType>type, expr);
 
                 if (!propertyTypeArray) {
