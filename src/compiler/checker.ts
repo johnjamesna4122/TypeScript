@@ -22718,7 +22718,13 @@ namespace ts {
                 }
 
                 if (!(computedType.flags & TypeFlags.Union)) {
-                    return !!(declaredType.flags & TypeFlags.Union);
+                    if (!(declaredType.flags & TypeFlags.Union)) {
+                        return false;
+                    }
+                    if ((<UnionType>declaredType).types.filter(t => !(t.flags & TypeFlags.Primitive)).length < 2) {
+                        return false;
+                    }
+                    return true;
                 }
 
                 return areTypesDiscriminable(reachableFinalType);
@@ -35303,7 +35309,7 @@ namespace ts {
                     return allowsStrings
                         ? [Diagnostics.Type_0_is_not_an_array_type_or_a_string_type_or_does_not_have_a_Symbol_iterator_method_that_returns_an_iterator, true]
                         : [Diagnostics.Type_0_is_not_an_array_type_or_does_not_have_a_Symbol_iterator_method_that_returns_an_iterator, true];
-                    }
+                }
 
                 const yieldType = getIterationTypeOfIterable(use, IterationTypeKind.Yield, inputType, /*errorNode*/ undefined);
 
