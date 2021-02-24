@@ -2308,12 +2308,6 @@ namespace ts {
         ;
 
     /** @internal */
-    export interface WellKnownSymbolExpression extends PropertyAccessExpression {
-        readonly expression: Identifier & { readonly escapedText: __String & "Symbol" };
-        readonly name: Identifier;
-    }
-
-    /** @internal */
     export type BindableObjectDefinePropertyCall = CallExpression & {
         readonly arguments: readonly [BindableStaticNameExpression, StringLiteralLike | NumericLiteral, ObjectLiteralExpression] & Readonly<TextRange>;
     };
@@ -2326,7 +2320,7 @@ namespace ts {
 
     /** @internal */
     export type LiteralLikeElementAccessExpression = ElementAccessExpression & Declaration & {
-        readonly argumentExpression: StringLiteralLike | NumericLiteral | WellKnownSymbolExpression;
+        readonly argumentExpression: StringLiteralLike | NumericLiteral;
     };
 
     /** @internal */
@@ -4289,7 +4283,9 @@ namespace ts {
 
         // Error handling
         AllowThisInObjectLiteral                = 1 << 15,
-        AllowQualifedNameInPlaceOfIdentifier    = 1 << 16,
+        AllowQualifiedNameInPlaceOfIdentifier    = 1 << 16,
+        /** @deprecated AllowQualifedNameInPlaceOfIdentifier. Use AllowQualifiedNameInPlaceOfIdentifier instead. */
+        AllowQualifedNameInPlaceOfIdentifier    = AllowQualifiedNameInPlaceOfIdentifier,
         AllowAnonymousIdentifier                = 1 << 17,
         AllowEmptyUnionOrIntersection           = 1 << 18,
         AllowEmptyTuple                         = 1 << 19,
@@ -4300,7 +4296,7 @@ namespace ts {
         AllowNodeModulesRelativePaths           = 1 << 26,
         /* @internal */ DoNotIncludeSymbolChain = 1 << 27,    // Skip looking up and printing an accessible symbol chain
 
-        IgnoreErrors = AllowThisInObjectLiteral | AllowQualifedNameInPlaceOfIdentifier | AllowAnonymousIdentifier | AllowEmptyUnionOrIntersection | AllowEmptyTuple | AllowEmptyIndexInfoType | AllowNodeModulesRelativePaths,
+        IgnoreErrors = AllowThisInObjectLiteral | AllowQualifiedNameInPlaceOfIdentifier | AllowAnonymousIdentifier | AllowEmptyUnionOrIntersection | AllowEmptyTuple | AllowEmptyIndexInfoType | AllowNodeModulesRelativePaths,
 
         // State
         InObjectTypeLiteral                     = 1 << 22,
@@ -5546,11 +5542,15 @@ namespace ts {
         /* @internal */
         mapper?: TypeMapper;                // Instantiation mapper
         /* @internal */
-        unionSignatures?: Signature[];      // Underlying signatures of a union signature
+        compositeSignatures?: Signature[];  // Underlying signatures of a union/intersection signature
+        /* @internal */
+        compositeKind?: TypeFlags;          // TypeFlags.Union if the underlying signatures are from union members, otherwise TypeFlags.Intersection
         /* @internal */
         erasedSignatureCache?: Signature;   // Erased version of signature (deferred)
         /* @internal */
         canonicalSignatureCache?: Signature; // Canonical version of signature (deferred)
+        /* @internal */
+        baseSignatureCache?: Signature;      // Base version of signature (deferred)
         /* @internal */
         optionalCallSignatureCache?: { inner?: Signature, outer?: Signature }; // Optional chained call version of signature (deferred)
         /* @internal */
