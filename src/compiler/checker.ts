@@ -22718,11 +22718,17 @@ namespace ts {
                 }
 
                 if (!(computedType.flags & TypeFlags.Union)) {
-                    if (!(declaredType.flags & TypeFlags.Union)) {
+                    if(isThisTypeParameter(computedType)){
                         return false;
                     }
-                    if ((<UnionType>declaredType).types.filter(t => !(t.flags & TypeFlags.Primitive)).length < 2) {
-                        return false;
+                    if(isElementAccessExpression(expr)){
+                        const type = getReducedApparentType(computedType);
+                        if (type.flags & TypeFlags.Object) {
+                            const resolved = resolveStructuredTypeMembers(<ObjectType>type);
+                            if(resolved.stringIndexInfo || resolved.numberIndexInfo){
+                                return false;
+                            }
+                        }
                     }
                     return true;
                 }
@@ -22790,7 +22796,8 @@ namespace ts {
                 if (strictNullChecks && assumeTrue && optionalChainContainsReference(expr, reference)) {
                     type = getTypeWithFacts(type, TypeFacts.NEUndefinedOrNull);
                 }
-                if (isMatchingReferenceDiscriminant(expr, type)) {
+                // the union check could reference this condition: https://github.com/microsoft/TypeScript/pull/38839#pullrequestreview-618968924
+                if ((type.flags & TypeFlags.Union) && isMatchingReferenceDiscriminant(expr, type)) {
                     return narrowTypeByDiscriminant(type, <AccessExpression>expr, t => getTypeWithFacts(t, assumeTrue ? TypeFacts.Truthy : TypeFacts.Falsy));
                 }
                 return type;
