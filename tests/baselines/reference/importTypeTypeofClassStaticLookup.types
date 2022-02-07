@@ -8,7 +8,7 @@ export declare class A {
 
 === tests/cases/compiler/index.d.ts ===
 export const foo: typeof import("./a").A.foo;
->foo : () => void
+>foo : any
 >A : any
 >foo : any
 

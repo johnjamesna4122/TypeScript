@@ -1,0 +1,26 @@
+=== tests/cases/conformance/declarationEmit/a.ts ===
+export class A {
+>A : A
+
+  static foo() {}
+>foo : () => void
+}
+
+=== tests/cases/conformance/declarationEmit/b.ts ===
+import { A } from './a';
+>A : typeof A
+
+export class B extends A {}
+>B : B
+>A : A
+
+=== tests/cases/conformance/declarationEmit/index.ts ===
+import { B } from './b';
+>B : typeof B
+
+export const foo = B.foo;
+>foo : () => void
+>B.foo : () => void
+>B : typeof B
+>foo : () => void
+

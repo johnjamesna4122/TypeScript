@@ -6031,7 +6031,7 @@ namespace ts {
                 const isTypeOf = meaning === SymbolFlags.Value;
                 if (some(chain[0].declarations, hasNonGlobalAugmentationExternalModuleSymbol)) {
                     // module is root, must use `ImportTypeNode`
-                    const nonRootParts = chain.length > 1 ? createAccessFromSymbolChain(chain, chain.length - 1, 1) : undefined;
+                    const nonRootParts = chain.length > 1 ? createAccessFromSymbolChain(chain, chain.length - 1, 1, isTypeOf) : undefined;
                     const typeParameterNodes = overrideTypeArguments || lookupTypeParameterNodes(chain, 0, context);
                     const specifier = getSpecifierForModuleSymbol(chain[0], context);
                     if (!(context.flags & NodeBuilderFlags.AllowNodeModulesRelativePaths) && getEmitModuleResolutionKind(compilerOptions) !== ModuleResolutionKind.Classic && specifier.indexOf("/node_modules/") >= 0) {
@@ -6059,7 +6059,7 @@ namespace ts {
                     }
                 }
 
-                const entityName = createAccessFromSymbolChain(chain, chain.length - 1, 0);
+                const entityName = createAccessFromSymbolChain(chain, chain.length - 1, 0, /*isTypeofImportType*/ false);
                 if (isIndexedAccessTypeNode(entityName)) {
                     return entityName; // Indexed accesses can never be `typeof`
                 }
@@ -6073,7 +6073,7 @@ namespace ts {
                     return factory.createTypeReferenceNode(entityName, lastTypeArgs as NodeArray<TypeNode>);
                 }
 
-                function createAccessFromSymbolChain(chain: Symbol[], index: number, stopper: number): EntityName | IndexedAccessTypeNode {
+                function createAccessFromSymbolChain(chain: Symbol[], index: number, stopper: number, isTypeofImportType: boolean): EntityName | IndexedAccessTypeNode {
                     const typeParameterNodes = index === (chain.length - 1) ? overrideTypeArguments : lookupTypeParameterNodes(chain, index, context);
                     const symbol = chain[index];
 
@@ -6101,11 +6101,12 @@ namespace ts {
                     }
                     context.approximateLength += symbolName.length + 1;
 
+                    const lookup = isTypeofImportType && index === 2 ? getExportsOfSymbol : getMembersOfSymbol;
                     if (!(context.flags & NodeBuilderFlags.ForbidIndexedAccessSymbolReferences) && parent &&
-                        getMembersOfSymbol(parent) && getMembersOfSymbol(parent).get(symbol.escapedName) &&
-                        getSymbolIfSameReference(getMembersOfSymbol(parent).get(symbol.escapedName)!, symbol)) {
+                        lookup(parent) && lookup(parent).get(symbol.escapedName) &&
+                        getSymbolIfSameReference(lookup(parent).get(symbol.escapedName)!, symbol)) {
                         // Should use an indexed access
-                        const LHS = createAccessFromSymbolChain(chain, index - 1, stopper);
+                        const LHS = createAccessFromSymbolChain(chain, index - 1, stopper, isTypeofImportType);
                         if (isIndexedAccessTypeNode(LHS)) {
                             return factory.createIndexedAccessTypeNode(LHS, factory.createLiteralTypeNode(factory.createStringLiteral(symbolName)));
                         }
@@ -6118,7 +6119,7 @@ namespace ts {
                     identifier.symbol = symbol;
 
                     if (index > stopper) {
-                        const LHS = createAccessFromSymbolChain(chain, index - 1, stopper);
+                        const LHS = createAccessFromSymbolChain(chain, index - 1, stopper, isTypeofImportType);
                         if (!isEntityName(LHS)) {
                             return Debug.fail("Impossible construct - an export of an indexed access cannot be reachable");
                         }
@@ -15868,13 +15869,7 @@ namespace ts {
                     let current: Identifier | undefined;
                     while (current = nameStack.shift()) {
                         const meaning = nameStack.length ? SymbolFlags.Namespace : targetMeaning;
-                        // typeof a.b.c is normally resolved using `checkExpression` which in turn defers to `checkQualifiedName`
-                        // That, in turn, ultimately uses `getPropertyOfType` on the type of the symbol, which differs slightly from
-                        // the `exports` lookup process that only looks up namespace members which is used for most type references
-                        const mergedResolvedSymbol = getMergedSymbol(resolveSymbol(currentNamespace));
-                        const next = node.isTypeOf
-                            ? getPropertyOfType(getTypeOfSymbol(mergedResolvedSymbol), current.escapedText)
-                            : getSymbol(getExportsOfSymbol(mergedResolvedSymbol), current.escapedText, meaning);
+                        const next = getSymbol(getExportsOfSymbol(getMergedSymbol(resolveSymbol(currentNamespace))), current.escapedText, meaning);
                         if (!next) {
                             error(current, Diagnostics.Namespace_0_has_no_exported_member_1, getFullyQualifiedName(currentNamespace), declarationNameToString(current));
                             return links.resolvedType = errorType;

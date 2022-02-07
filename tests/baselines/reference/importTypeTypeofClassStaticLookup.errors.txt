@@ -1,0 +1,12 @@
+tests/cases/compiler/index.d.ts(1,40): error TS2694: Namespace '"tests/cases/compiler/a"' has no exported member 'A'.
+
+
+==== tests/cases/compiler/a.d.ts (0 errors) ====
+    export declare class A {
+        static foo(): void;
+    }
+    
+==== tests/cases/compiler/index.d.ts (1 errors) ====
+    export const foo: typeof import("./a").A.foo;
+                                           ~
+!!! error TS2694: Namespace '"tests/cases/compiler/a"' has no exported member 'A'.
