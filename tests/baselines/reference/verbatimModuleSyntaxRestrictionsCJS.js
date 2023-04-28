@@ -19,13 +19,15 @@ import type { funciton as funciton2 } from "./decl"; // ok I guess?
 import("./decl"); // error
 type T = typeof import("./decl"); // ok
 export {}; // error
-export const x = 1; // error
+export const x = 1;
+const y = 2;
+export { y }; // error
 export interface I {} // ok
 export type { T }; // ok
 export namespace JustTypes {
     export type T = number;
 }
-export namespace Values { // error
+export namespace Values {
     export const x = 1;
 }
 export default interface Default {} // sketchy, but ok
@@ -85,12 +87,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Values = exports.x = void 0;
+exports.Values = exports.y = exports.x = void 0;
 const decl_1 = __importDefault(require("./decl")); // error
 const esmy2 = __importStar(require("./decl")); // error
 const decl_2 = require("./decl"); // error
 Promise.resolve().then(() => __importStar(require("./decl"))); // error
-exports.x = 1; // error
+exports.x = 1;
+const y = 2;
+exports.y = y;
 var Values;
 (function (Values) {
     Values.x = 1;

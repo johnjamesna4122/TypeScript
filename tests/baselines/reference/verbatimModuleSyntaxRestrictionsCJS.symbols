@@ -40,29 +40,35 @@ type T = typeof import("./decl"); // ok
 >T : Symbol(T, Decl(main.ts, 4, 17))
 
 export {}; // error
-export const x = 1; // error
+export const x = 1;
 >x : Symbol(x, Decl(main.ts, 7, 12))
 
+const y = 2;
+>y : Symbol(y, Decl(main.ts, 8, 5))
+
+export { y }; // error
+>y : Symbol(y, Decl(main.ts, 9, 8))
+
 export interface I {} // ok
->I : Symbol(I, Decl(main.ts, 7, 19))
+>I : Symbol(I, Decl(main.ts, 9, 13))
 
 export type { T }; // ok
->T : Symbol(T, Decl(main.ts, 9, 13))
+>T : Symbol(T, Decl(main.ts, 11, 13))
 
 export namespace JustTypes {
->JustTypes : Symbol(JustTypes, Decl(main.ts, 9, 18))
+>JustTypes : Symbol(JustTypes, Decl(main.ts, 11, 18))
 
     export type T = number;
->T : Symbol(T, Decl(main.ts, 10, 28))
+>T : Symbol(T, Decl(main.ts, 12, 28))
 }
-export namespace Values { // error
->Values : Symbol(Values, Decl(main.ts, 12, 1))
+export namespace Values {
+>Values : Symbol(Values, Decl(main.ts, 14, 1))
 
     export const x = 1;
->x : Symbol(x, Decl(main.ts, 14, 16))
+>x : Symbol(x, Decl(main.ts, 16, 16))
 }
 export default interface Default {} // sketchy, but ok
->Default : Symbol(Default, Decl(main.ts, 15, 1))
+>Default : Symbol(Default, Decl(main.ts, 17, 1))
 
 === /main2.ts ===
 export interface I {}

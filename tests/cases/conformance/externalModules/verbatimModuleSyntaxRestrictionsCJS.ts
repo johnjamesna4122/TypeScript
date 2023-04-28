@@ -23,13 +23,15 @@ import type { funciton as funciton2 } from "./decl"; // ok I guess?
 import("./decl"); // error
 type T = typeof import("./decl"); // ok
 export {}; // error
-export const x = 1; // error
+export const x = 1;
+const y = 2;
+export { y }; // error
 export interface I {} // ok
 export type { T }; // ok
 export namespace JustTypes {
     export type T = number;
 }
-export namespace Values { // error
+export namespace Values {
     export const x = 1;
 }
 export default interface Default {} // sketchy, but ok

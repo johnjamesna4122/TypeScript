@@ -43905,8 +43905,8 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
                     (moduleKind === ModuleKind.CommonJS || node.parent.impliedNodeFormat === ModuleKind.CommonJS)
                 ) {
                     const exportModifier = node.modifiers?.find(m => m.kind === SyntaxKind.ExportKeyword);
-                    if (exportModifier) {
-                        error(exportModifier, Diagnostics.A_top_level_export_modifier_cannot_be_used_on_value_declarations_in_a_CommonJS_module_when_verbatimModuleSyntax_is_enabled);
+                    if (exportModifier && node.modifiers?.some(m => m.kind === SyntaxKind.DefaultKeyword)) {
+                        error(exportModifier, Diagnostics.export_default_cannot_be_used_on_value_declarations_in_a_CommonJS_module_when_verbatimModuleSyntax_is_enabled);
                     }
                 }
             }
@@ -47299,6 +47299,18 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
                         }
                         else if (sawExportBeforeDecorators) {
                             return grammarErrorOnNode(firstDecorator!, Diagnostics.Decorators_are_not_valid_here);
+                        }
+                        else if (
+                            compilerOptions.verbatimModuleSyntax &&
+                            !(node.flags & NodeFlags.Ambient) &&
+                            node.kind !== SyntaxKind.TypeAliasDeclaration &&
+                            node.kind !== SyntaxKind.InterfaceDeclaration &&
+                            // ModuleDeclaration needs to be checked that it is uninstantiated later
+                            node.kind !== SyntaxKind.ModuleDeclaration &&
+                            node.parent.kind === SyntaxKind.SourceFile &&
+                            (moduleKind === ModuleKind.CommonJS || getSourceFileOfNode(node).impliedNodeFormat === ModuleKind.CommonJS)
+                        ) {
+                            return grammarErrorOnNode(modifier, Diagnostics.export_default_cannot_be_used_on_value_declarations_in_a_CommonJS_module_when_verbatimModuleSyntax_is_enabled);
                         }
 
                         flags |= ModifierFlags.Default;

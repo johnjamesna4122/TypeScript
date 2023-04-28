@@ -41,9 +41,16 @@ type T = typeof import("./decl"); // ok
 >T : typeof import("/decl")
 
 export {}; // error
-export const x = 1; // error
+export const x = 1;
 >x : 1
 >1 : 1
+
+const y = 2;
+>y : 2
+>2 : 2
+
+export { y }; // error
+>y : 2
 
 export interface I {} // ok
 export type { T }; // ok
@@ -53,7 +60,7 @@ export namespace JustTypes {
     export type T = number;
 >T : number
 }
-export namespace Values { // error
+export namespace Values {
 >Values : typeof Values
 
     export const x = 1;
