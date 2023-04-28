@@ -47269,17 +47269,6 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
                         break;
 
                     case SyntaxKind.ExportKeyword:
-                        if (compilerOptions.verbatimModuleSyntax &&
-                            !(node.flags & NodeFlags.Ambient) &&
-                            node.kind !== SyntaxKind.TypeAliasDeclaration &&
-                            node.kind !== SyntaxKind.InterfaceDeclaration &&
-                            // ModuleDeclaration needs to be checked that it is uninstantiated later
-                            node.kind !== SyntaxKind.ModuleDeclaration &&
-                            node.parent.kind === SyntaxKind.SourceFile &&
-                            (moduleKind === ModuleKind.CommonJS || getSourceFileOfNode(node).impliedNodeFormat === ModuleKind.CommonJS)
-                        ) {
-                            return grammarErrorOnNode(modifier, Diagnostics.A_top_level_export_modifier_cannot_be_used_on_value_declarations_in_a_CommonJS_module_when_verbatimModuleSyntax_is_enabled);
-                        }
                         if (flags & ModifierFlags.Export) {
                             return grammarErrorOnNode(modifier, Diagnostics._0_modifier_already_seen, "export");
                         }
