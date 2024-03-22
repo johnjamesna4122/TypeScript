@@ -395,7 +395,7 @@ import {
     skipParentheses,
     some,
     SourceFile,
-    SourceMapSource,
+    type SourceMapSource,
     SpreadAssignment,
     SpreadElement,
     startOnNewLine,

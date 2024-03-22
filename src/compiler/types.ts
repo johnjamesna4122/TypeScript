@@ -378,8 +378,6 @@ export const enum SyntaxKind {
 
     ImportAttributes,
     ImportAttribute,
-    /** @deprecated */ AssertClause = ImportAttributes,
-    /** @deprecated */ AssertEntry = ImportAttribute,
     /** @deprecated */ ImportTypeAssertionContainer,
 
     // Property assignments
@@ -407,8 +405,6 @@ export const enum SyntaxKind {
     JSDocVariadicType,
     JSDocNamepathType, // https://jsdoc.app/about-namepaths.html
     JSDoc,
-    /** @deprecated Use SyntaxKind.JSDoc */
-    JSDocComment = JSDoc,
     JSDocText,
     JSDocTypeLiteral,
     JSDocSignature,
@@ -486,6 +482,10 @@ export const enum SyntaxKind {
     LastJSDocTagNode = JSDocSatisfiesTag,
     /** @internal */ FirstContextualKeyword = AbstractKeyword,
     /** @internal */ LastContextualKeyword = OfKeyword,
+    /** @deprecated */ AssertClause = ImportAttributes,
+    /** @deprecated */ AssertEntry = ImportAttribute,
+    /** @deprecated Use SyntaxKind.JSDoc */
+    JSDocComment = JSDoc,
 }
 
 export type TriviaSyntaxKind =

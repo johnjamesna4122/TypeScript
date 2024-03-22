@@ -3143,7 +3143,7 @@ export const enum ScriptTarget {
     ES2022 = "es2022",
     ESNext = "esnext",
     JSON = "json",
-    Latest = ESNext,
+    Latest = "esnext",
 }
 
 {

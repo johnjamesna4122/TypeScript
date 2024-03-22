@@ -211,7 +211,7 @@ import {
     HasType,
     HasTypeArguments,
     HeritageClause,
-    Identifier,
+    type Identifier,
     identifierToKeywordKind,
     IdentifierTypePredicate,
     identity,
@@ -413,7 +413,7 @@ import {
     NamespaceImport,
     NewExpression,
     NewLineKind,
-    Node,
+    type Node,
     NodeArray,
     NodeFlags,
     nodeModulesPathPart,
@@ -478,7 +478,7 @@ import {
     SetAccessorDeclaration,
     ShorthandPropertyAssignment,
     shouldAllowImportingTsExtension,
-    Signature,
+    type Signature,
     SignatureDeclaration,
     SignatureFlags,
     singleElementArray,
@@ -492,7 +492,7 @@ import {
     SourceFile,
     SourceFileLike,
     SourceFileMayBeEmittedHost,
-    SourceMapSource,
+    type SourceMapSource,
     startsWith,
     startsWithUseStrict,
     Statement,
@@ -504,7 +504,7 @@ import {
     SuperExpression,
     SuperProperty,
     SwitchStatement,
-    Symbol,
+    type Symbol,
     SymbolFlags,
     SymbolTable,
     SyntaxKind,
@@ -518,7 +518,7 @@ import {
     TextRange,
     TextSpan,
     ThisTypePredicate,
-    Token,
+    type Token,
     TokenFlags,
     tokenToString,
     toPath,
@@ -531,7 +531,7 @@ import {
     TryStatement,
     TsConfigSourceFile,
     TupleTypeNode,
-    Type,
+    type Type,
     TypeAliasDeclaration,
     TypeAssertion,
     TypeChecker,
@@ -5452,13 +5452,6 @@ export const enum OperatorPrecedence {
     //     CoalesceExpression
     Conditional,
 
-    // CoalesceExpression:
-    //     CoalesceExpressionHead `??` BitwiseORExpression
-    // CoalesceExpressionHead:
-    //     CoalesceExpression
-    //     BitwiseORExpression
-    Coalesce = Conditional, // NOTE: This is wrong
-
     // LogicalORExpression:
     //     LogicalANDExpression
     //     LogicalORExpression `||` LogicalANDExpression
@@ -5596,6 +5589,13 @@ export const enum OperatorPrecedence {
     // -1 is lower than all other precedences. Returning it will cause binary expression
     // parsing to stop.
     Invalid = -1,
+
+    // CoalesceExpression:
+    //     CoalesceExpressionHead `??` BitwiseORExpression
+    // CoalesceExpressionHead:
+    //     CoalesceExpression
+    //     BitwiseORExpression
+    Coalesce = Conditional, // NOTE: This is wrong
 }
 
 /** @internal */
