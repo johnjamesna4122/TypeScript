@@ -3,6 +3,7 @@ import {
     AnyImportOrRequireStatement,
     AnyImportSyntax,
     arrayFrom,
+    type BindingElement,
     CancellationToken,
     cast,
     changeAnyExtension,
@@ -48,7 +49,6 @@ import {
     getMeaningFromDeclaration,
     getMeaningFromLocation,
     getNameForExportedSymbol,
-    getNodeId,
     getOutputExtension,
     getQuoteFromPreference,
     getQuotePreference,
@@ -119,6 +119,7 @@ import {
     QuotePreference,
     removeFileExtension,
     removeSuffix,
+    type RequireOrImportCall,
     RequireVariableStatement,
     sameMap,
     ScriptTarget,
@@ -145,6 +146,7 @@ import {
     TypeChecker,
     TypeOnlyAliasDeclaration,
     UserPreferences,
+    type VariableDeclarationInitializedTo,
 } from "../_namespaces/ts";
 import {
     createCodeFixAction,
@@ -216,7 +218,7 @@ export interface ImportAdder {
     addImportFromSymbol: (exportedSymbol: Symbol, isValidTypeOnlyUseSite?: boolean) => void;
     addImportForNonExistentExport: (exportName: string, exportingFileName: string, exportKind: ExportKind, exportedMeanings: SymbolFlags, isImportUsageValidAsTypeOnly: boolean) => void;
     addImportForUnresolvedIdentifier: (context: CodeFixContextBase, symbolToken: Identifier, useAutoImportProvider: boolean) => void;
-    removeExistingImport: (declaration: ImportClause | ImportSpecifier | NamespaceImport) => void;
+    removeExistingImport: (declaration: ImportClause | ImportSpecifier | NamespaceImport | VariableDeclarationInitializedTo<RequireOrImportCall> | BindingElement) => void;
     writeFixes: (changeTracker: textChanges.ChangeTracker, oldFileQuotePreference?: QuotePreference) => void;
 }
 
@@ -236,9 +238,8 @@ function createImportAdderWorker(sourceFile: SourceFile, program: Program, useAu
     // Namespace fixes don't conflict, so just build a list.
     const addToNamespace: FixUseNamespaceImport[] = [];
     const importType: FixAddJsdocTypeImport[] = [];
-    /** Keys are import clause node IDs. */
-    const addToExisting = new Map<string, AddToExistingState>();
-    const removeExisting = new Set<ImportClause | ImportSpecifier | NamespaceImport>();
+    const addToExisting = new Map<ImportClause | ObjectBindingPattern, AddToExistingState>();
+    const removeExisting = new Set<ImportClause | ImportSpecifier | NamespaceImport | VariableDeclarationInitializedTo<RequireOrImportCall> | BindingElement>();
 
     type NewImportsKey = `${0 | 1}|${string}`;
     /** Use `getNewImportEntry` for access */
@@ -324,7 +325,7 @@ function createImportAdderWorker(sourceFile: SourceFile, program: Program, useAu
         }
     }
 
-    function removeExistingImport(declaration: ImportClause | ImportSpecifier | NamespaceImport) {
+    function removeExistingImport(declaration: ImportClause | ImportSpecifier | NamespaceImport | VariableDeclarationInitializedTo<RequireOrImportCall> | BindingElement) {
         if (declaration.kind === SyntaxKind.ImportClause) {
             Debug.assertIsDefined(declaration.name, "ImportClause should have a name if it's being removed");
         }
@@ -342,10 +343,9 @@ function createImportAdderWorker(sourceFile: SourceFile, program: Program, useAu
                 break;
             case ImportFixKind.AddToExisting: {
                 const { importClauseOrBindingPattern, importKind, addAsTypeOnly } = fix;
-                const key = String(getNodeId(importClauseOrBindingPattern));
-                let entry = addToExisting.get(key);
+                let entry = addToExisting.get(importClauseOrBindingPattern);
                 if (!entry) {
-                    addToExisting.set(key, entry = { importClauseOrBindingPattern, defaultImport: undefined, namedImports: new Map() });
+                    addToExisting.set(importClauseOrBindingPattern, entry = { importClauseOrBindingPattern, defaultImport: undefined, namedImports: new Map() });
                 }
                 if (importKind === ImportKind.Named) {
                     const prevValue = entry?.namedImports.get(symbolName);
@@ -460,12 +460,13 @@ function createImportAdderWorker(sourceFile: SourceFile, program: Program, useAu
         for (const fix of importType) {
             addImportType(changeTracker, sourceFile, fix, quotePreference);
         }
-        let importSpecifiersToRemoveWhileAdding: Set<ImportSpecifier> | undefined;
+        let importSpecifiersToRemoveWhileAdding: Set<ImportSpecifier | BindingElement> | undefined;
         if (removeExisting.size) {
-            const importDeclarationsWithRemovals = new Set([...removeExisting].map(d => findAncestor(d, isImportDeclaration)!));
+            const importDeclarationsWithRemovals = new Set(mapDefined([...removeExisting], d => findAncestor(d, isImportDeclaration)!));
+            const variableDeclarationsWithRemovals = new Set(mapDefined([...removeExisting], d => findAncestor(d, isVariableDeclarationInitializedToRequire)!));
             const emptyImportDeclarations = [...importDeclarationsWithRemovals].filter(d =>
                 // nothing added to the import declaration
-                !addToExisting.has(String(getNodeId(d.importClause!))) &&
+                !addToExisting.has(d.importClause!) &&
                 // no default, or default is being removed
                 (!d.importClause?.name || removeExisting.has(d.importClause)) &&
                 // no namespace import, or namespace import is being removed
@@ -473,17 +474,23 @@ function createImportAdderWorker(sourceFile: SourceFile, program: Program, useAu
                 // no named imports, or all named imports are being removed
                 (!tryCast(d.importClause?.namedBindings, isNamedImports) || every((d.importClause!.namedBindings as NamedImports).elements, e => removeExisting.has(e)))
             );
+            const emptyVariableDeclarations = [...variableDeclarationsWithRemovals].filter(d =>
+                // no binding elements being added to the variable declaration
+                (d.name.kind !== SyntaxKind.ObjectBindingPattern || !addToExisting.has(d.name)) &&
+                // no binding elements, or all binding elements are being removed
+                (d.name.kind !== SyntaxKind.ObjectBindingPattern || every(d.name.elements, e => removeExisting.has(e)))
+            );
             const namedBindingsToDelete = [...importDeclarationsWithRemovals].filter(d =>
                 // has named bindings
                 d.importClause?.namedBindings &&
                 // is not being fully removed
                 emptyImportDeclarations.indexOf(d) === -1 &&
                 // is not gaining named imports
-                !addToExisting.get(String(getNodeId(d.importClause)))?.namedImports &&
+                !addToExisting.get(d.importClause)?.namedImports &&
                 // all named imports are being removed
                 (d.importClause.namedBindings.kind === SyntaxKind.NamespaceImport || every(d.importClause.namedBindings.elements, e => removeExisting.has(e)))
             );
-            for (const declaration of emptyImportDeclarations) {
+            for (const declaration of [...emptyImportDeclarations, ...emptyVariableDeclarations]) {
                 changeTracker.delete(sourceFile, declaration);
             }
             for (const declaration of namedBindingsToDelete) {
@@ -499,8 +506,9 @@ function createImportAdderWorker(sourceFile: SourceFile, program: Program, useAu
                 );
             }
             for (const declaration of removeExisting) {
-                const importDeclaration = findAncestor(declaration, isImportDeclaration)!;
+                const importDeclaration = findAncestor(declaration, isImportDeclaration);
                 if (
+                    importDeclaration &&
                     emptyImportDeclarations.indexOf(importDeclaration) === -1 &&
                     namedBindingsToDelete.indexOf(importDeclaration) === -1
                 ) {
@@ -509,13 +517,22 @@ function createImportAdderWorker(sourceFile: SourceFile, program: Program, useAu
                     }
                     else {
                         Debug.assert(declaration.kind === SyntaxKind.ImportSpecifier, "NamespaceImport should have been handled earlier");
-                        if (addToExisting.get(String(getNodeId(importDeclaration.importClause!)))?.namedImports) {
+                        if (addToExisting.get(importDeclaration.importClause!)?.namedImports) {
                             // Handle combined inserts/deletes in `doAddExistingFix`
                             (importSpecifiersToRemoveWhileAdding ??= new Set()).add(declaration);
                         }
                         else {
                             changeTracker.delete(sourceFile, declaration);
                         }
+                    }
+                }
+                else if (declaration.kind === SyntaxKind.BindingElement) {
+                    if (addToExisting.get(declaration.parent as ObjectBindingPattern)?.namedImports) {
+                        // Handle combined inserts/deletes in `doAddExistingFix`
+                        (importSpecifiersToRemoveWhileAdding ??= new Set()).add(declaration);
+                    }
+                    else {
+                        changeTracker.delete(sourceFile, declaration);
                     }
                 }
             }
@@ -1630,10 +1647,25 @@ function doAddExistingFix(
     clause: ImportClause | ObjectBindingPattern,
     defaultImport: Import | undefined,
     namedImports: readonly Import[],
-    removeExistingImportSpecifiers: Set<ImportSpecifier> | undefined,
+    removeExistingImportSpecifiers: Set<ImportSpecifier | BindingElement> | undefined,
     preferences: UserPreferences,
 ): void {
     if (clause.kind === SyntaxKind.ObjectBindingPattern) {
+        if (removeExistingImportSpecifiers && clause.elements.some(e => removeExistingImportSpecifiers.has(e))) {
+            // If we're both adding and removing elements, just replace and reprint the whole
+            // node. The change tracker doesn't understand all the operations and can insert or
+            // leave behind stray commas.
+            changes.replaceNode(
+                sourceFile,
+                clause,
+                factory.createObjectBindingPattern([
+                    ...clause.elements.filter(e => !removeExistingImportSpecifiers.has(e)),
+                    ...defaultImport ? [factory.createBindingElement(/*dotDotDotToken*/ undefined, /*propertyName*/ "default", defaultImport.name)] : emptyArray,
+                    ...namedImports.map(i => factory.createBindingElement(/*dotDotDotToken*/ undefined, /*propertyName*/ undefined, i.name)),
+                ]),
+            );
+            return;
+        }
         if (defaultImport) {
             addElementToBindingPattern(clause, defaultImport.name, "default");
         }

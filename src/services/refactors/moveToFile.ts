@@ -244,8 +244,8 @@ function getNewStatementsAndRemoveFromOldFile(
     program: Program,
     host: LanguageServiceHost,
     preferences: UserPreferences,
-    importAdderForNewFile?: codefix.ImportAdder,
-    importAdderForOldFile?: codefix.ImportAdder,
+    importAdderForNewFile: codefix.ImportAdder | undefined,
+    importAdderForOldFile: codefix.ImportAdder,
 ) {
     const checker = program.getTypeChecker();
     const prologueDirectives = takeWhile(oldFile.statements, isPrologueDirective);
@@ -262,9 +262,7 @@ function getNewStatementsAndRemoveFromOldFile(
 
     makeImportOrRequire(oldFile, /*defaultImport*/ undefined, /*imports*/ [], targetFileName, program, host, useEsModuleSyntax, quotePreference, Array.from(usage.oldFileImportsFromTargetFile), importAdderForOldFile, oldFile);
     deleteUnusedOldImports(oldFile, toMove.all, changes, usage.unusedImportsFromOldFile, checker, importAdderForOldFile);
-    if (importAdderForOldFile) {
-        importAdderForOldFile.writeFixes(changes, quotePreference);
-    }
+    importAdderForOldFile.writeFixes(changes, quotePreference);
 
     deleteMovedStatements(oldFile, toMove.ranges, changes);
     updateImportsInOtherFiles(changes, program, host, oldFile, usage.movedSymbols, targetFileName, quotePreference);
@@ -324,27 +322,39 @@ export function deleteMovedStatements(sourceFile: SourceFile, moved: readonly St
 }
 
 /** @internal */
-export function deleteUnusedOldImports(oldFile: SourceFile, toMove: readonly Statement[], changes: textChanges.ChangeTracker, toDelete: Set<Symbol>, checker: TypeChecker, importAdder: ImportAdder | undefined) {
+export function deleteUnusedOldImports(oldFile: SourceFile, toMove: readonly Statement[], changes: textChanges.ChangeTracker, toDelete: Set<Symbol>, checker: TypeChecker, importAdder: ImportAdder) {
     for (const statement of oldFile.statements) {
         if (contains(toMove, statement)) continue;
         forEachImportInStatement(statement, i => {
-            if (importAdder && i.kind === SyntaxKind.ImportDeclaration) {
-                if (i.importClause?.name && toDelete.has(i.importClause.symbol)) {
+            if (i.kind === SyntaxKind.ImportDeclaration) {
+                if (i.importClause?.name && toDelete.has(Debug.checkDefined(i.importClause.symbol))) {
                     importAdder.removeExistingImport(i.importClause);
                 }
-                if (i.importClause?.namedBindings?.kind === SyntaxKind.NamespaceImport && toDelete.has(i.importClause.namedBindings.symbol)) {
+                if (i.importClause?.namedBindings?.kind === SyntaxKind.NamespaceImport && toDelete.has(Debug.checkDefined(i.importClause.namedBindings.symbol))) {
                     importAdder.removeExistingImport(i.importClause.namedBindings);
                 }
                 if (i.importClause?.namedBindings?.kind === SyntaxKind.NamedImports) {
                     for (const element of i.importClause.namedBindings.elements) {
-                        if (toDelete.has(element.symbol)) {
+                        if (toDelete.has(Debug.checkDefined(element.symbol))) {
                             importAdder.removeExistingImport(element);
                         }
                     }
                 }
             }
-            else {
-                deleteUnusedImports(oldFile, i, changes, name => toDelete.has(checker.getSymbolAtLocation(name)!));
+            else if (i.kind === SyntaxKind.VariableDeclaration && i.name.kind === SyntaxKind.Identifier && toDelete.has(Debug.checkDefined(i.symbol))) {
+                importAdder.removeExistingImport(i);
+            }
+            else if (i.name.kind === SyntaxKind.ObjectBindingPattern) {
+                for (const element of i.name.elements) {
+                    if (toDelete.has(Debug.checkDefined(element.symbol))) {
+                        importAdder.removeExistingImport(element);
+                    }
+                }
+            }
+            else if (i.kind === SyntaxKind.ImportEqualsDeclaration && toDelete.has(Debug.checkDefined(i.symbol))) {
+                // ImportAdder doesn't handle this since it can never conflict with
+                // an add-to-existing-import fix (for now)
+                changes.delete(oldFile, i);
             }
         });
     }
@@ -635,9 +645,6 @@ function deleteUnusedImportsInVariableDeclaration(sourceFile: SourceFile, varDec
             if (isUnused(name)) {
                 if (varDecl.initializer && isRequireCall(varDecl.initializer, /*requireStringLiteralLikeArgument*/ true)) {
                     changes.delete(sourceFile, isVariableDeclarationList(varDecl.parent) && length(varDecl.parent.declarations) === 1 ? varDecl.parent.parent : varDecl);
-                }
-                else {
-                    changes.delete(sourceFile, name);
                 }
             }
             break;

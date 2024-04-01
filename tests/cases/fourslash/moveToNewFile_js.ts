@@ -17,7 +17,7 @@
 verify.moveToNewFile({
     newFileContents: {
         "/a.js":
-`const { a, } = require("./other");
+`const { a } = require("./other");
 const { y, z } = require("./y");
 const p = 0;
 exports.p = p;

@@ -90,7 +90,7 @@ function getNewStatementsAndRemoveFromOldFile(
     host: LanguageServiceHost,
     newFilename: string,
     preferences: UserPreferences,
-    importAdderForOldFile?: codefix.ImportAdder,
+    importAdderForOldFile: codefix.ImportAdder,
 ) {
     const checker = program.getTypeChecker();
     const prologueDirectives = takeWhile(oldFile.statements, isPrologueDirective);
@@ -103,9 +103,7 @@ function getNewStatementsAndRemoveFromOldFile(
     const quotePreference = getQuotePreference(oldFile, preferences);
     makeImportOrRequire(oldFile, /*defaultImport*/ undefined, /*imports*/ [], newFilename, program, host, useEsModuleSyntax, quotePreference, Array.from(usage.oldFileImportsFromTargetFile), importAdderForOldFile, oldFile);
     deleteUnusedOldImports(oldFile, toMove.all, changes, usage.unusedImportsFromOldFile, checker, importAdderForOldFile);
-    if (importAdderForOldFile) {
-        importAdderForOldFile.writeFixes(changes, quotePreference);
-    }
+    importAdderForOldFile.writeFixes(changes, quotePreference);
 
     deleteMovedStatements(oldFile, toMove.ranges, changes);
     updateImportsInOtherFiles(changes, program, host, oldFile, usage.movedSymbols, newFilename, quotePreference);
