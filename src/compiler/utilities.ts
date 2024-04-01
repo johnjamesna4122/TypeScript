@@ -9565,7 +9565,7 @@ export function usesExtensionsOnImports({ imports }: SourceFile, hasExtension: (
 }
 
 /** @internal */
-export function getModuleSpecifierEndingPreference(preference: UserPreferences["importModuleSpecifierEnding"], resolutionMode: ResolutionMode, compilerOptions: CompilerOptions, sourceFile: SourceFile): ModuleSpecifierEnding {
+export function getModuleSpecifierEndingPreference(preference: UserPreferences["importModuleSpecifierEnding"], resolutionMode: ResolutionMode, compilerOptions: CompilerOptions, sourceFile?: SourceFile): ModuleSpecifierEnding {
     const moduleResolution = getEmitModuleResolutionKind(compilerOptions);
     const moduleResolutionIsNodeNext = ModuleResolutionKind.Node16 <= moduleResolution && moduleResolution <= ModuleResolutionKind.NodeNext;
     if (preference === "js" || resolutionMode === ModuleKind.ESNext && moduleResolutionIsNodeNext) {
@@ -9592,22 +9592,22 @@ export function getModuleSpecifierEndingPreference(preference: UserPreferences["
     // accurately, and more importantly, literally nobody wants `Index` and its existence is a mystery.
     if (!shouldAllowImportingTsExtension(compilerOptions)) {
         // If .ts imports are not valid, we only need to see one .js import to go with that.
-        return usesExtensionsOnImports(sourceFile) ? ModuleSpecifierEnding.JsExtension : ModuleSpecifierEnding.Minimal;
+        return sourceFile && usesExtensionsOnImports(sourceFile) ? ModuleSpecifierEnding.JsExtension : ModuleSpecifierEnding.Minimal;
     }
 
     return inferPreference();
 
     function inferPreference() {
         let usesJsExtensions = false;
-        const specifiers = sourceFile.imports.length ? sourceFile.imports :
-            isSourceFileJS(sourceFile) ? getRequiresAtTopOfFile(sourceFile).map(r => r.arguments[0]) :
+        const specifiers = sourceFile?.imports.length ? sourceFile.imports :
+            sourceFile && isSourceFileJS(sourceFile) ? getRequiresAtTopOfFile(sourceFile).map(r => r.arguments[0]) :
             emptyArray;
         for (const specifier of specifiers) {
             if (pathIsRelative(specifier.text)) {
                 if (
                     moduleResolutionIsNodeNext &&
                     resolutionMode === ModuleKind.CommonJS &&
-                    getModeForUsageLocation(sourceFile, specifier, compilerOptions) === ModuleKind.ESNext
+                    getModeForUsageLocation(sourceFile!, specifier, compilerOptions) === ModuleKind.ESNext
                 ) {
                     // We're trying to decide a preference for a CommonJS module specifier, but looking at an ESM import.
                     continue;

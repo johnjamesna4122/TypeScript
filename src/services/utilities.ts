@@ -97,6 +97,7 @@ import {
     getEmitScriptTarget,
     getExternalModuleImportEqualsDeclarationExpression,
     getImpliedNodeFormatForFile,
+    getImpliedNodeFormatForFileWorker,
     getIndentString,
     getJSDocEnumTag,
     getLastChild,
@@ -281,6 +282,7 @@ import {
     ModuleDeclaration,
     ModuleInstanceState,
     ModuleKind,
+    type ModuleResolutionHost,
     ModuleResolutionKind,
     ModuleSpecifierResolutionHost,
     moduleSpecifiers,
@@ -301,6 +303,7 @@ import {
     or,
     OrganizeImports,
     PackageJsonDependencyGroup,
+    type PackageJsonInfo,
     parseBigInt,
     pathIsRelative,
     PrefixUnaryExpression,
@@ -313,6 +316,7 @@ import {
     pseudoBigIntToString,
     QualifiedName,
     RefactorContext,
+    type ResolutionMode,
     Scanner,
     ScriptElementKind,
     ScriptElementKindModifier,
@@ -4291,4 +4295,29 @@ export function isBlockLike(node: Node): node is BlockLike {
         default:
             return false;
     }
+}
+
+/** @internal */
+export interface FutureSourceFile {
+    readonly fileName: string;
+    readonly impliedNodeFormat?: ResolutionMode;
+    readonly packageJsonScope?: PackageJsonInfo;
+    readonly externalModuleIndicator?: boolean;
+    readonly statements?: undefined;
+}
+
+/** @internal */
+export function createFutureSourceFile(fileName: string, externalModuleIndicator: boolean | undefined, program: Program): FutureSourceFile {
+    // TODO: ???
+    const moduleResolutionHost: ModuleResolutionHost = {
+        ...program,
+        readFile: fileName => Debug.checkDefined(program.readFile)(fileName),
+    };
+    const result = getImpliedNodeFormatForFileWorker(fileName, program.getPackageJsonInfoCache?.(), moduleResolutionHost, program.getCompilerOptions());
+    let impliedNodeFormat, packageJsonScope;
+    if (typeof result === "object") {
+        impliedNodeFormat = result.impliedNodeFormat;
+        packageJsonScope = result.packageJsonScope;
+    }
+    return { fileName, externalModuleIndicator, impliedNodeFormat, packageJsonScope };
 }

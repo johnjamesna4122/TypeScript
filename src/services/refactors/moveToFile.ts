@@ -29,6 +29,7 @@ import {
     EnumDeclaration,
     escapeLeadingUnderscores,
     ExportDeclaration,
+    ExportKind,
     Expression,
     ExpressionStatement,
     extensionFromPath,
@@ -49,9 +50,11 @@ import {
     GetCanonicalFileName,
     getDecorators,
     getDirectoryPath,
+    getEmitScriptTarget,
     getLineAndCharacterOfPosition,
     getLocaleSpecificMessage,
     getModifiers,
+    getNameForExportedSymbol,
     getNormalizedAbsolutePath,
     getPropertySymbolFromBindingElement,
     getQuotePreference,
@@ -149,6 +152,9 @@ import {
     VariableDeclarationList,
     VariableStatement,
 } from "../_namespaces/ts";
+import type {
+    ImportAdder,
+} from "../codefixes/importFixes";
 import {
     registerRefactor,
 } from "../refactorProvider";
@@ -255,11 +261,11 @@ function getNewStatementsAndRemoveFromOldFile(
     const quotePreference = getQuotePreference(oldFile, preferences);
 
     makeImportOrRequire(oldFile, /*defaultImport*/ undefined, /*imports*/ [], targetFileName, program, host, useEsModuleSyntax, quotePreference, Array.from(usage.oldFileImportsFromTargetFile), importAdderForOldFile, oldFile);
+    deleteUnusedOldImports(oldFile, toMove.all, changes, usage.unusedImportsFromOldFile, checker, importAdderForOldFile);
     if (importAdderForOldFile) {
         importAdderForOldFile.writeFixes(changes, quotePreference);
     }
 
-    deleteUnusedOldImports(oldFile, toMove.all, changes, usage.unusedImportsFromOldFile, checker);
     deleteMovedStatements(oldFile, toMove.ranges, changes);
     updateImportsInOtherFiles(changes, program, host, oldFile, usage.movedSymbols, targetFileName, quotePreference);
 
@@ -318,10 +324,29 @@ export function deleteMovedStatements(sourceFile: SourceFile, moved: readonly St
 }
 
 /** @internal */
-export function deleteUnusedOldImports(oldFile: SourceFile, toMove: readonly Statement[], changes: textChanges.ChangeTracker, toDelete: Set<Symbol>, checker: TypeChecker) {
+export function deleteUnusedOldImports(oldFile: SourceFile, toMove: readonly Statement[], changes: textChanges.ChangeTracker, toDelete: Set<Symbol>, checker: TypeChecker, importAdder: ImportAdder | undefined) {
     for (const statement of oldFile.statements) {
         if (contains(toMove, statement)) continue;
-        forEachImportInStatement(statement, i => deleteUnusedImports(oldFile, i, changes, name => toDelete.has(checker.getSymbolAtLocation(name)!)));
+        forEachImportInStatement(statement, i => {
+            if (importAdder && i.kind === SyntaxKind.ImportDeclaration) {
+                if (i.importClause?.name && toDelete.has(i.importClause.symbol)) {
+                    importAdder.removeExistingImport(i.importClause);
+                }
+                if (i.importClause?.namedBindings?.kind === SyntaxKind.NamespaceImport && toDelete.has(i.importClause.namedBindings.symbol)) {
+                    importAdder.removeExistingImport(i.importClause.namedBindings);
+                }
+                if (i.importClause?.namedBindings?.kind === SyntaxKind.NamedImports) {
+                    for (const element of i.importClause.namedBindings.elements) {
+                        if (toDelete.has(element.symbol)) {
+                            importAdder.removeExistingImport(element);
+                        }
+                    }
+                }
+            }
+            else {
+                deleteUnusedImports(oldFile, i, changes, name => toDelete.has(checker.getSymbolAtLocation(name)!));
+            }
+        });
     }
 }
 
@@ -495,7 +520,9 @@ export function makeImportOrRequire(
         if (importAdder && symbols && importingSourceFile) {
             for (const symbol of symbols) {
                 if (importAdder) {
-                    importAdder.addImportFromSymbol(symbol, /*isValidTypeOnlyUseSite*/ false, pathToTargetFileWithCorrectExtension, sourceFile);
+                    const symbolName = getNameForExportedSymbol(symbol, getEmitScriptTarget(program.getCompilerOptions()));
+                    const exportKind = symbol.name === "default" && symbol.parent ? ExportKind.Default : ExportKind.Named;
+                    importAdder.addImportForNonExistentExport(symbolName, targetFileNameWithExtension, exportKind, symbol.flags, /*isImportUsageValidAsTypeOnly*/ false);
                 }
             }
         }
@@ -509,7 +536,9 @@ export function makeImportOrRequire(
         if (importAdder && symbols && importingSourceFile) {
             for (const symbol of symbols) {
                 if (importAdder) {
-                    importAdder.addImportFromSymbol(symbol, /*isValidTypeOnlyUseSite*/ false, pathToTargetFileWithCorrectExtension, sourceFile);
+                    const symbolName = getNameForExportedSymbol(symbol, getEmitScriptTarget(program.getCompilerOptions()));
+                    const exportKind = symbol.name === "default" && symbol.parent ? ExportKind.Default : ExportKind.Named;
+                    importAdder.addImportForNonExistentExport(symbolName, targetFileNameWithExtension, exportKind, symbol.flags, /*isImportUsageValidAsTypeOnly*/ false);
                 }
             }
         }

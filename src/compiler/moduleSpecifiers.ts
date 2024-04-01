@@ -110,6 +110,7 @@ import {
     StringLiteral,
     Symbol,
     SymbolFlags,
+    SyntaxKind,
     toPath,
     tryGetExtensionFromPath,
     tryParseJson,
@@ -141,7 +142,7 @@ export interface ModuleSpecifierPreferences {
 export function getModuleSpecifierPreferences(
     { importModuleSpecifierPreference, importModuleSpecifierEnding }: UserPreferences,
     compilerOptions: CompilerOptions,
-    importingSourceFile: SourceFile,
+    importingSourceFile: Pick<SourceFile, "fileName" | "impliedNodeFormat">,
     oldImportSpecifier?: string,
 ): ModuleSpecifierPreferences {
     const filePreferredEnding = getPreferredEnding();
@@ -197,9 +198,13 @@ export function getModuleSpecifierPreferences(
             importModuleSpecifierEnding,
             resolutionMode ?? importingSourceFile.impliedNodeFormat,
             compilerOptions,
-            importingSourceFile,
+            isFullSourceFile(importingSourceFile) ? importingSourceFile : undefined,
         );
     }
+}
+
+function isFullSourceFile(sourceFile: Partial<SourceFile>): sourceFile is SourceFile {
+    return sourceFile?.kind === SyntaxKind.SourceFile;
 }
 
 // `importingSourceFile` and `importingSourceFileName`? Why not just use `importingSourceFile.path`?
@@ -368,6 +373,26 @@ export function getModuleSpecifiersWithCacheInfo(
     );
     cache?.set(importingSourceFile.path, moduleSourceFile.path, userPreferences, options, modulePaths, result);
     return { moduleSpecifiers: result, computedWithoutCache };
+}
+
+/** @internal */
+export function getLocalModuleSpecifierBetweenFileNames(
+    importingFile: Pick<SourceFile, "fileName" | "impliedNodeFormat">,
+    targetFileName: string,
+    compilerOptions: CompilerOptions,
+    host: ModuleSpecifierResolutionHost,
+    options: ModuleSpecifierOptions = {},
+): string {
+    const info = getInfo(importingFile.fileName, host);
+    const importMode = options.overrideImportMode ?? importingFile.impliedNodeFormat;
+    return getLocalModuleSpecifier(
+        targetFileName,
+        info,
+        compilerOptions,
+        host,
+        importMode,
+        getModuleSpecifierPreferences({}, compilerOptions, importingFile),
+    );
 }
 
 function computeModuleSpecifiers(

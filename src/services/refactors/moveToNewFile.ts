@@ -102,11 +102,11 @@ function getNewStatementsAndRemoveFromOldFile(
     const useEsModuleSyntax = !fileShouldUseJavaScriptRequire(newFilename, program, host, !!oldFile.commonJsModuleIndicator);
     const quotePreference = getQuotePreference(oldFile, preferences);
     makeImportOrRequire(oldFile, /*defaultImport*/ undefined, /*imports*/ [], newFilename, program, host, useEsModuleSyntax, quotePreference, Array.from(usage.oldFileImportsFromTargetFile), importAdderForOldFile, oldFile);
+    deleteUnusedOldImports(oldFile, toMove.all, changes, usage.unusedImportsFromOldFile, checker, importAdderForOldFile);
     if (importAdderForOldFile) {
         importAdderForOldFile.writeFixes(changes, quotePreference);
     }
 
-    deleteUnusedOldImports(oldFile, toMove.all, changes, usage.unusedImportsFromOldFile, checker);
     deleteMovedStatements(oldFile, toMove.ranges, changes);
     updateImportsInOtherFiles(changes, program, host, oldFile, usage.movedSymbols, newFilename, quotePreference);
 
