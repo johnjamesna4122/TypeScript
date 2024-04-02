@@ -6,6 +6,7 @@ import {
     hasSyntacticModifier,
     Identifier,
     ModifierFlags,
+    ModuleKind,
     Program,
     skipAlias,
     SourceFile,
@@ -17,6 +18,7 @@ import {
     LanguageServiceHost,
 } from "../types";
 import {
+    createFutureSourceFile,
     nodeSeenTracker,
     QuotePreference,
 } from "../utilities";
@@ -72,7 +74,7 @@ export function getTargetFileImportsAndAddExportInOldFile(
     host: LanguageServiceHost,
     useEsModuleSyntax: boolean,
     quotePreference: QuotePreference,
-    importAdder?: codefix.ImportAdder,
+    importAdder: codefix.ImportAdder,
 ) {
     const copiedOldImports: AnyImportOrRequireStatement[] = [];
     /**
@@ -104,7 +106,7 @@ export function getTargetFileImportsAndAddExportInOldFile(
     }
 
     // Also, import things used from the old file, and insert 'export' modifiers as necessary in the old file.
-    const targetFileSourceFile = program.getSourceFile(targetFile);
+    const targetFileSourceFile = program.getSourceFile(targetFile) ?? createFutureSourceFile(targetFile, ModuleKind.ESNext, program);
     let oldFileDefault: Identifier | undefined;
     const oldFileNamedImports: string[] = [];
     const oldFileSymbols: Symbol[] = [];
@@ -134,7 +136,6 @@ export function getTargetFileImportsAndAddExportInOldFile(
         }
     });
 
-    targetFileSourceFile ? makeImportOrRequire(oldFile, oldFileDefault, oldFileNamedImports, oldFile.fileName, program, host, useEsModuleSyntax, quotePreference, oldFileSymbols, importAdder, targetFileSourceFile) :
-        append(copiedOldImports, makeImportOrRequire(oldFile, oldFileDefault, oldFileNamedImports, oldFile.fileName, program, host, useEsModuleSyntax, quotePreference));
+    makeImportOrRequire(oldFile, oldFileDefault, oldFileNamedImports, oldFile.fileName, program, host, useEsModuleSyntax, quotePreference, oldFileSymbols, importAdder, targetFileSourceFile);
     return copiedOldImports;
 }

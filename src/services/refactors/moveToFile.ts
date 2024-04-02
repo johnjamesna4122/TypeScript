@@ -19,6 +19,7 @@ import {
     Comparison,
     concatenate,
     contains,
+    createFutureSourceFile,
     createModuleSpecifierResolutionHost,
     createTextRangeFromSpan,
     Debug,
@@ -46,6 +47,7 @@ import {
     flatMap,
     forEachKey,
     FunctionDeclaration,
+    type FutureSourceFile,
     getAssignmentDeclarationKind,
     GetCanonicalFileName,
     getDecorators,
@@ -116,6 +118,7 @@ import {
     ModifierFlags,
     ModifierLike,
     ModuleDeclaration,
+    ModuleKind,
     NamedImportBindings,
     Node,
     NodeFlags,
@@ -222,29 +225,28 @@ function error(notApplicableReason: string) {
 
 function doChange(context: RefactorContext, oldFile: SourceFile, targetFile: string, program: Program, toMove: ToMove, changes: textChanges.ChangeTracker, host: LanguageServiceHost, preferences: UserPreferences): void {
     const checker = program.getTypeChecker();
+    const isForNewFile = !host.fileExists(targetFile);
+    const targetSourceFile = isForNewFile
+        ? createFutureSourceFile(targetFile, oldFile.externalModuleIndicator ? ModuleKind.ESNext : oldFile.commonJsModuleIndicator ? ModuleKind.CommonJS : undefined, program)
+        : Debug.checkDefined(program.getSourceFile(targetFile));
     const importAdderForOldFile = codefix.createImportAdder(oldFile, context.program, context.preferences, context.host);
-    // For a new file
-    if (!host.fileExists(targetFile)) {
-        changes.createNewFile(oldFile, targetFile, getNewStatementsAndRemoveFromOldFile(oldFile, targetFile, getUsageInfo(oldFile, toMove.all, checker), changes, toMove, program, host, preferences, /*importAdderForNewFile*/ undefined, importAdderForOldFile));
+    const importAdderForNewFile = codefix.createImportAdder(targetSourceFile, context.program, context.preferences, context.host);
+    getNewStatementsAndRemoveFromOldFile(oldFile, targetSourceFile, getUsageInfo(oldFile, toMove.all, checker, isForNewFile ? undefined : getExistingLocals(targetSourceFile as SourceFile, toMove.all, checker)), changes, toMove, program, host, preferences, importAdderForNewFile, importAdderForOldFile);
+    if (isForNewFile) {
         addNewFileToTsconfig(program, changes, oldFile.fileName, targetFile, hostGetCanonicalFileName(host));
-    }
-    else {
-        const targetSourceFile = Debug.checkDefined(program.getSourceFile(targetFile));
-        const importAdderForNewFile = codefix.createImportAdder(targetSourceFile, context.program, context.preferences, context.host);
-        getNewStatementsAndRemoveFromOldFile(oldFile, targetSourceFile, getUsageInfo(oldFile, toMove.all, checker, getExistingLocals(targetSourceFile, toMove.all, checker)), changes, toMove, program, host, preferences, importAdderForNewFile, importAdderForOldFile);
     }
 }
 
 function getNewStatementsAndRemoveFromOldFile(
     oldFile: SourceFile,
-    targetFile: string | SourceFile,
+    targetFile: SourceFile | FutureSourceFile,
     usage: UsageInfo,
     changes: textChanges.ChangeTracker,
     toMove: ToMove,
     program: Program,
     host: LanguageServiceHost,
     preferences: UserPreferences,
-    importAdderForNewFile: codefix.ImportAdder | undefined,
+    importAdderForNewFile: codefix.ImportAdder,
     importAdderForOldFile: codefix.ImportAdder,
 ) {
     const checker = program.getTypeChecker();
@@ -280,9 +282,7 @@ function getNewStatementsAndRemoveFromOldFile(
             insertImports(changes, targetFile, imports, /*blankLineBetween*/ true, preferences);
         }
     }
-    if (importAdderForNewFile) {
-        importAdderForNewFile.writeFixes(changes, quotePreference);
-    }
+    importAdderForNewFile.writeFixes(changes, quotePreference);
     if (body.length) {
         return [
             ...prologueDirectives,
@@ -518,9 +518,9 @@ export function makeImportOrRequire(
     host: LanguageServiceHost,
     useEs6Imports: boolean,
     quotePreference: QuotePreference,
-    symbols?: Symbol[],
-    importAdder?: codefix.ImportAdder,
-    importingSourceFile?: SourceFile,
+    symbols: Symbol[],
+    importAdder: codefix.ImportAdder,
+    importingSourceFile: SourceFile | FutureSourceFile,
 ) {
     const pathToTargetFile = resolvePath(getDirectoryPath(sourceFile.path), targetFileNameWithExtension);
     const pathToTargetFileWithCorrectExtension = importingSourceFile ? getModuleSpecifier(program.getCompilerOptions(), importingSourceFile, importingSourceFile.fileName, pathToTargetFile, createModuleSpecifierResolutionHost(program, host)) :

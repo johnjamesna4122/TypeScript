@@ -3458,6 +3458,11 @@ export function isInternalModuleImportEqualsDeclaration(node: Node): node is Imp
 }
 
 /** @internal */
+export function isFullSourceFile(sourceFile: object): sourceFile is SourceFile {
+    return (sourceFile as Partial<SourceFile>)?.kind === SyntaxKind.SourceFile;
+}
+
+/** @internal */
 export function isSourceFileJS(file: SourceFile): boolean {
     return isInJSFile(file);
 }

@@ -32,6 +32,7 @@ import {
     flatten,
     forEach,
     forEachAncestorDirectory,
+    type FutureSourceFile,
     getBaseFileName,
     GetCanonicalFileName,
     getConditions,
@@ -65,6 +66,7 @@ import {
     isDeclarationFileName,
     isExternalModuleAugmentation,
     isExternalModuleNameRelative,
+    isFullSourceFile,
     isMissingPackageJsonInfo,
     isModuleBlock,
     isModuleDeclaration,
@@ -110,7 +112,6 @@ import {
     StringLiteral,
     Symbol,
     SymbolFlags,
-    SyntaxKind,
     toPath,
     tryGetExtensionFromPath,
     tryParseJson,
@@ -203,10 +204,6 @@ export function getModuleSpecifierPreferences(
     }
 }
 
-function isFullSourceFile(sourceFile: Partial<SourceFile>): sourceFile is SourceFile {
-    return sourceFile?.kind === SyntaxKind.SourceFile;
-}
-
 // `importingSourceFile` and `importingSourceFileName`? Why not just use `importingSourceFile.path`?
 // Because when this is called by the file renamer, `importingSourceFile` is the file being renamed,
 // while `importingSourceFileName` its *new* name. We need a source file just to get its
@@ -247,7 +244,7 @@ export function getModuleSpecifier(
 /** @internal */
 export function getNodeModulesPackageName(
     compilerOptions: CompilerOptions,
-    importingSourceFile: SourceFile,
+    importingSourceFile: SourceFile | FutureSourceFile,
     nodeModulesFileName: string,
     host: ModuleSpecifierResolutionHost,
     preferences: UserPreferences,
@@ -277,7 +274,7 @@ function getModuleSpecifierWorker(
 /** @internal */
 export function tryGetModuleSpecifiersFromCache(
     moduleSymbol: Symbol,
-    importingSourceFile: SourceFile,
+    importingSourceFile: SourceFile | FutureSourceFile,
     host: ModuleSpecifierResolutionHost,
     userPreferences: UserPreferences,
     options: ModuleSpecifierOptions = {},
@@ -293,7 +290,7 @@ export function tryGetModuleSpecifiersFromCache(
 
 function tryGetModuleSpecifiersFromCacheWorker(
     moduleSymbol: Symbol,
-    importingSourceFile: SourceFile,
+    importingSourceFile: SourceFile | FutureSourceFile,
     host: ModuleSpecifierResolutionHost,
     userPreferences: UserPreferences,
     options: ModuleSpecifierOptions = {},
@@ -339,7 +336,7 @@ export function getModuleSpecifiersWithCacheInfo(
     moduleSymbol: Symbol,
     checker: TypeChecker,
     compilerOptions: CompilerOptions,
-    importingSourceFile: SourceFile,
+    importingSourceFile: SourceFile | FutureSourceFile,
     host: ModuleSpecifierResolutionHost,
     userPreferences: UserPreferences,
     options: ModuleSpecifierOptions = {},
@@ -398,7 +395,7 @@ export function getLocalModuleSpecifierBetweenFileNames(
 function computeModuleSpecifiers(
     modulePaths: readonly ModulePath[],
     compilerOptions: CompilerOptions,
-    importingSourceFile: SourceFile,
+    importingSourceFile: SourceFile | FutureSourceFile,
     host: ModuleSpecifierResolutionHost,
     userPreferences: UserPreferences,
     options: ModuleSpecifierOptions = {},
@@ -406,7 +403,7 @@ function computeModuleSpecifiers(
 ): readonly string[] {
     const info = getInfo(importingSourceFile.fileName, host);
     const preferences = getModuleSpecifierPreferences(userPreferences, compilerOptions, importingSourceFile);
-    const existingSpecifier = forEach(modulePaths, modulePath =>
+    const existingSpecifier = isFullSourceFile(importingSourceFile) && forEach(modulePaths, modulePath =>
         forEach(
             host.getFileIncludeReasons().get(toPath(modulePath.path, host.getCurrentDirectory(), info.getCanonicalFileName)),
             reason => {
@@ -1032,7 +1029,7 @@ function tryGetModuleNameFromRootDirs(rootDirs: readonly string[], moduleFileNam
     return processEnding(shortest, allowedEndings, compilerOptions);
 }
 
-function tryGetModuleNameAsNodeModule({ path, isRedirect }: ModulePath, { getCanonicalFileName, canonicalSourceDirectory }: Info, importingSourceFile: SourceFile, host: ModuleSpecifierResolutionHost, options: CompilerOptions, userPreferences: UserPreferences, packageNameOnly?: boolean, overrideMode?: ResolutionMode): string | undefined {
+function tryGetModuleNameAsNodeModule({ path, isRedirect }: ModulePath, { getCanonicalFileName, canonicalSourceDirectory }: Info, importingSourceFile: SourceFile | FutureSourceFile, host: ModuleSpecifierResolutionHost, options: CompilerOptions, userPreferences: UserPreferences, packageNameOnly?: boolean, overrideMode?: ResolutionMode): string | undefined {
     if (!host.fileExists || !host.readFile) {
         return undefined;
     }
