@@ -1,16 +1,30 @@
 import {
+    BindingElement,
     codefix,
     Debug,
     findAncestor,
     Identifier,
+    ImportClause,
+    ImportEqualsDeclaration,
+    ImportSpecifier,
     isAnyImportOrRequireStatement,
+    isBindingElement,
+    isImportClause,
+    isImportEqualsDeclaration,
+    isImportSpecifier,
+    isNamespaceImport,
+    isVariableDeclaration,
     ModuleKind,
+    NamespaceImport,
     Program,
+    RequireOrImportCall,
     skipAlias,
     SourceFile,
     Symbol,
     textChanges,
+    tryCast,
     TypeChecker,
+    VariableDeclarationInitializedTo,
 } from "../_namespaces/ts";
 import {
     LanguageServiceHost,
@@ -80,7 +94,8 @@ export function getTargetFileImportsAndAddExportInOldFile(
         const targetSymbol = skipAlias(symbol, checker);
         if (checker.isUnknownSymbol(targetSymbol)) {
             // TODO: maybe `importsToCopy` should contain the declaration in addition to the symbol/isValidTypeOnlyUseSite
-            const declaration = findAncestor(symbol.declarations?.[0], isAnyImportOrRequireStatement);
+            const declaration = tryCast(symbol.declarations?.[0], (d): d is ImportSpecifier | ImportClause | NamespaceImport | ImportEqualsDeclaration | BindingElement | VariableDeclarationInitializedTo<RequireOrImportCall> => isImportSpecifier(d) || isImportClause(d) || isNamespaceImport(d) || isImportEqualsDeclaration(d) || isBindingElement(d) || isVariableDeclaration(d))
+                ?? findAncestor(symbol.declarations?.[0], isAnyImportOrRequireStatement);
             importAdder.addVerbatimImport(Debug.checkDefined(declaration));
         }
         else {

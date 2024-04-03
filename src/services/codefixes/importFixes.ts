@@ -85,6 +85,7 @@ import {
     isJSXTagName,
     isNamedImports,
     isNamespaceImport,
+    isRequireVariableStatement,
     isSourceFileJS,
     isStringANonContextualKeyword,
     isStringLiteral,
@@ -220,7 +221,7 @@ export interface ImportAdder {
     addImportFromSymbol: (exportedSymbol: Symbol, isValidTypeOnlyUseSite?: boolean) => void;
     addImportForNonExistentExport: (exportName: string, exportingFileName: string, exportKind: ExportKind, exportedMeanings: SymbolFlags, isImportUsageValidAsTypeOnly: boolean) => void;
     addImportForUnresolvedIdentifier: (context: CodeFixContextBase, symbolToken: Identifier, useAutoImportProvider: boolean) => void;
-    addVerbatimImport: (declaration: AnyImportOrRequireStatement) => void;
+    addVerbatimImport: (declaration: AnyImportOrRequireStatement | ImportClause | ImportSpecifier | NamespaceImport | VariableDeclarationInitializedTo<RequireOrImportCall> | BindingElement) => void;
     removeExistingImport: (declaration: ImportClause | ImportSpecifier | NamespaceImport | VariableDeclarationInitializedTo<RequireOrImportCall> | BindingElement) => void;
     writeFixes: (changeTracker: textChanges.ChangeTracker, oldFileQuotePreference?: QuotePreference) => void;
 }
@@ -243,14 +244,14 @@ function createImportAdderWorker(sourceFile: SourceFile | FutureSourceFile, prog
     const importType: FixAddJsdocTypeImport[] = [];
     const addToExisting = new Map<ImportClause | ObjectBindingPattern, AddToExistingState>();
     const removeExisting = new Set<ImportClause | ImportSpecifier | NamespaceImport | VariableDeclarationInitializedTo<RequireOrImportCall> | BindingElement>();
-    const verbatimImports = new Set<AnyImportOrRequireStatement>();
+    const verbatimImports = new Set<AnyImportOrRequireStatement | ImportClause | ImportSpecifier | NamespaceImport | VariableDeclarationInitializedTo<RequireOrImportCall> | BindingElement>();
 
     type NewImportsKey = `${0 | 1}|${string}`;
     /** Use `getNewImportEntry` for access */
     const newImports = new Map<NewImportsKey, Mutable<ImportsCollection & { useRequire: boolean; }>>();
     return { addImportFromDiagnostic, addImportFromSymbol, writeFixes, hasFixes, addImportForUnresolvedIdentifier, addImportForNonExistentExport, removeExistingImport, addVerbatimImport };
 
-    function addVerbatimImport(declaration: AnyImportOrRequireStatement) {
+    function addVerbatimImport(declaration: AnyImportOrRequireStatement | ImportClause | ImportSpecifier | NamespaceImport | VariableDeclarationInitializedTo<RequireOrImportCall> | BindingElement) {
         verbatimImports.add(declaration);
     }
 
@@ -575,10 +576,76 @@ function createImportAdderWorker(sourceFile: SourceFile | FutureSourceFile, prog
             );
             newDeclarations = combine(newDeclarations, declarations);
         });
-        newDeclarations = combine(newDeclarations, verbatimImports.size ? [...verbatimImports].map(i => getSynthesizedDeepClone(i, /*includeTrivia*/ true)) : undefined);
+        newDeclarations = combine(newDeclarations, getCombinedVerbatimImports());
         if (newDeclarations) {
             insertImports(changeTracker, sourceFile, newDeclarations, /*blankLineBetween*/ true, preferences);
         }
+    }
+
+    function getCombinedVerbatimImports(): AnyImportOrRequireStatement[] | undefined {
+        if (!verbatimImports.size) return undefined;
+        const importDeclarations = new Set(mapDefined([...verbatimImports], d => findAncestor(d, isImportDeclaration)));
+        const requireStatements = new Set(mapDefined([...verbatimImports], d => findAncestor(d, isRequireVariableStatement)));
+        return [
+            ...[...importDeclarations].map(d => {
+                if (verbatimImports.has(d)) {
+                    return getSynthesizedDeepClone(d, /*includeTrivia*/ true);
+                }
+                return getSynthesizedDeepClone(
+                    factory.updateImportDeclaration(
+                        d,
+                        d.modifiers,
+                        d.importClause && factory.updateImportClause(
+                            d.importClause,
+                            d.importClause.isTypeOnly,
+                            verbatimImports.has(d.importClause) ? d.importClause.name : undefined,
+                            verbatimImports.has(d.importClause.namedBindings as NamespaceImport)
+                                ? d.importClause.namedBindings as NamespaceImport :
+                                tryCast(d.importClause.namedBindings, isNamedImports)?.elements.some(e => verbatimImports.has(e))
+                                ? factory.updateNamedImports(
+                                    d.importClause.namedBindings as NamedImports,
+                                    (d.importClause.namedBindings as NamedImports).elements.filter(e => verbatimImports.has(e)),
+                                )
+                                : undefined,
+                        ),
+                        d.moduleSpecifier,
+                        d.attributes,
+                    ),
+                    /*includeTrivia*/ true,
+                );
+            }),
+            ...[...requireStatements].map(s => {
+                if (verbatimImports.has(s)) {
+                    return getSynthesizedDeepClone(s, /*includeTrivia*/ true);
+                }
+                return getSynthesizedDeepClone(
+                    factory.updateVariableStatement(
+                        s,
+                        s.modifiers,
+                        factory.updateVariableDeclarationList(
+                            s.declarationList,
+                            mapDefined(s.declarationList.declarations, d => {
+                                if (verbatimImports.has(d)) {
+                                    return d;
+                                }
+                                return factory.updateVariableDeclaration(
+                                    d,
+                                    d.name.kind === SyntaxKind.ObjectBindingPattern
+                                        ? factory.updateObjectBindingPattern(
+                                            d.name,
+                                            d.name.elements.filter(e => verbatimImports.has(e)),
+                                        ) : d.name,
+                                    d.exclamationToken,
+                                    d.type,
+                                    d.initializer,
+                                );
+                            }),
+                        ),
+                    ),
+                    /*includeTrivia*/ true,
+                ) as RequireVariableStatement;
+            }),
+        ];
     }
 
     function hasFixes() {

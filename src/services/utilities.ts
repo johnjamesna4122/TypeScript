@@ -382,6 +382,7 @@ import {
     VoidExpression,
     walkUpParenthesizedExpressions,
     YieldExpression,
+    getOriginalNode,
 } from "./_namespaces/ts";
 // These utilities are common to multiple language service features.
 // #region
@@ -2641,7 +2642,11 @@ export function insertImports(changes: textChanges.ChangeTracker, sourceFile: So
             changes.insertNodesAtTopOfFile(sourceFile, sortedNewImports, blankLineBetween);
         }
         else {
-            changes.insertStatementsInNewFile(sourceFile.fileName, sortedNewImports);
+            for (const newImport of sortedNewImports) {
+                // Insert one at a time to send correct original source file for accurate text reuse
+                // when some imports are cloned from existing ones in other files.
+                changes.insertStatementsInNewFile(sourceFile.fileName, [newImport], getOriginalNode(newImport)?.getSourceFile());
+            }
         }
         return;
     }
