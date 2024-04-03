@@ -76,7 +76,6 @@ import {
     ImportDeclaration,
     ImportEqualsDeclaration,
     importFromModuleSpecifier,
-    insertImports,
     InterfaceDeclaration,
     isArrayLiteralExpression,
     isBinaryExpression,
@@ -87,6 +86,7 @@ import {
     isExportSpecifier,
     isExpressionStatement,
     isExternalModuleReference,
+    isFullSourceFile,
     isFunctionLikeDeclaration,
     isIdentifier,
     isImportDeclaration,
@@ -237,7 +237,7 @@ function doChange(context: RefactorContext, oldFile: SourceFile, targetFile: str
     }
 }
 
-function getNewStatementsAndRemoveFromOldFile(
+export function getNewStatementsAndRemoveFromOldFile(
     oldFile: SourceFile,
     targetFile: SourceFile | FutureSourceFile,
     usage: UsageInfo,
@@ -256,47 +256,29 @@ function getNewStatementsAndRemoveFromOldFile(
         return [...prologueDirectives, ...toMove.all];
     }
 
-    // If the targetFile is a string, it’s the file name for a new file, if it’s a SourceFile, it’s the existing target file.
-    const targetFileName = typeof targetFile === "string" ? targetFile : targetFile.fileName;
-
-    const useEsModuleSyntax = !fileShouldUseJavaScriptRequire(targetFileName, program, host, !!oldFile.commonJsModuleIndicator);
+    const useEsModuleSyntax = !fileShouldUseJavaScriptRequire(targetFile.fileName, program, host, !!oldFile.commonJsModuleIndicator);
     const quotePreference = getQuotePreference(oldFile, preferences);
 
-    makeImportOrRequire(oldFile, /*defaultImport*/ undefined, /*imports*/ [], targetFileName, program, host, useEsModuleSyntax, quotePreference, Array.from(usage.oldFileImportsFromTargetFile), importAdderForOldFile, oldFile);
+    makeImportOrRequire(oldFile, /*defaultImport*/ undefined, /*imports*/ [], targetFile.fileName, program, host, useEsModuleSyntax, quotePreference, Array.from(usage.oldFileImportsFromTargetFile), importAdderForOldFile, oldFile);
     deleteUnusedOldImports(oldFile, toMove.all, changes, usage.unusedImportsFromOldFile, checker, importAdderForOldFile);
     importAdderForOldFile.writeFixes(changes, quotePreference);
 
     deleteMovedStatements(oldFile, toMove.ranges, changes);
-    updateImportsInOtherFiles(changes, program, host, oldFile, usage.movedSymbols, targetFileName, quotePreference);
+    updateImportsInOtherFiles(changes, program, host, oldFile, usage.movedSymbols, targetFile.fileName, quotePreference);
 
-    const imports = getTargetFileImportsAndAddExportInOldFile(oldFile, targetFileName, usage.oldImportsNeededByTargetFile, usage.targetFileImportsFromOldFile, changes, checker, program, host, useEsModuleSyntax, quotePreference, importAdderForNewFile);
-    const body = addExports(oldFile, toMove.all, usage.oldFileImportsFromTargetFile, useEsModuleSyntax);
-    if (typeof targetFile !== "string") {
-        if (targetFile.statements.length > 0) {
-            moveStatementsToTargetFile(changes, program, body, targetFile, toMove);
-        }
-        else {
-            changes.insertNodesAtEndOfFile(targetFile, body, /*blankLineBetween*/ false);
-        }
-        if (imports.length > 0) {
-            insertImports(changes, targetFile, imports, /*blankLineBetween*/ true, preferences);
-        }
-    }
+    getTargetFileImportsAndAddExportInOldFile(oldFile, targetFile.fileName, usage.oldImportsNeededByTargetFile, usage.targetFileImportsFromOldFile, changes, checker, program, host, useEsModuleSyntax, quotePreference, importAdderForNewFile);
     importAdderForNewFile.writeFixes(changes, quotePreference);
-    if (body.length) {
-        return [
-            ...prologueDirectives,
-            ...imports,
-            SyntaxKind.NewLineTrivia as const,
-            ...body,
-        ];
-    }
 
-    return [
-        ...prologueDirectives,
-        ...imports,
-        ...body,
-    ];
+    const body = addExports(oldFile, toMove.all, usage.oldFileImportsFromTargetFile, useEsModuleSyntax);
+    if (isFullSourceFile(targetFile) && targetFile.statements.length > 0) {
+        moveStatementsToTargetFile(changes, program, body, targetFile, toMove);
+    }
+    else if (isFullSourceFile(targetFile)) {
+        changes.insertNodesAtEndOfFile(targetFile, body, /*blankLineBetween*/ false);
+    }
+    else {
+        changes.insertStatementsInNewFile(targetFile.fileName, importAdderForNewFile.hasFixes() ? [SyntaxKind.NewLineTrivia, ...body] : body, oldFile);
+    }
 }
 
 /** @internal */

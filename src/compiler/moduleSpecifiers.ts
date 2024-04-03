@@ -232,7 +232,7 @@ export function updateModuleSpecifier(
 /** @internal */
 export function getModuleSpecifier(
     compilerOptions: CompilerOptions,
-    importingSourceFile: SourceFile,
+    importingSourceFile: SourceFile | FutureSourceFile,
     importingSourceFileName: string,
     toFileName: string,
     host: ModuleSpecifierResolutionHost,
@@ -257,7 +257,7 @@ export function getNodeModulesPackageName(
 
 function getModuleSpecifierWorker(
     compilerOptions: CompilerOptions,
-    importingSourceFile: SourceFile,
+    importingSourceFile: SourceFile | FutureSourceFile,
     importingSourceFileName: string,
     toFileName: string,
     host: ModuleSpecifierResolutionHost,

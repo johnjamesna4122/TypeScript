@@ -1,11 +1,9 @@
 import {
-    AnyImportOrRequireStatement,
-    append,
     codefix,
-    factory,
-    hasSyntacticModifier,
+    Debug,
+    findAncestor,
     Identifier,
-    ModifierFlags,
+    isAnyImportOrRequireStatement,
     ModuleKind,
     Program,
     skipAlias,
@@ -24,12 +22,9 @@ import {
 } from "../utilities";
 import {
     addExportToChanges,
-    filterImport,
-    forEachImportInStatement,
     getTopLevelDeclarationStatement,
     isTopLevelDeclaration,
     makeImportOrRequire,
-    moduleSpecifierFromImport,
     nameOfTopLevelDeclaration,
 } from "./moveToFile";
 
@@ -76,34 +71,22 @@ export function getTargetFileImportsAndAddExportInOldFile(
     quotePreference: QuotePreference,
     importAdder: codefix.ImportAdder,
 ) {
-    const copiedOldImports: AnyImportOrRequireStatement[] = [];
     /**
      * Recomputing the imports is preferred with importAdder because it manages multiple import additions for a file and writes then to a ChangeTracker,
      * but sometimes it fails because of unresolved imports from files, or when a source file is not available for the target file (in this case when creating a new file).
      * So in that case, fall back to copying the import verbatim.
      */
-    if (importAdder) {
-        importsToCopy.forEach((isValidTypeOnlyUseSite, symbol) => {
-            try {
-                importAdder.addImportFromSymbol(skipAlias(symbol, checker), isValidTypeOnlyUseSite);
-            }
-            catch {
-                for (const oldStatement of oldFile.statements) {
-                    forEachImportInStatement(oldStatement, i => {
-                        append(copiedOldImports, filterImport(i, factory.createStringLiteral(moduleSpecifierFromImport(i).text), name => checker.getSymbolAtLocation(name) === symbol));
-                    });
-                }
-            }
-        });
-    }
-    else {
-        // When target file does not exist
-        for (const oldStatement of oldFile.statements) {
-            forEachImportInStatement(oldStatement, i => {
-                append(copiedOldImports, filterImport(i, moduleSpecifierFromImport(i), name => importsToCopy.has(checker.getSymbolAtLocation(name)!)));
-            });
+    importsToCopy.forEach((isValidTypeOnlyUseSite, symbol) => {
+        const targetSymbol = skipAlias(symbol, checker);
+        if (checker.isUnknownSymbol(targetSymbol)) {
+            // TODO: maybe `importsToCopy` should contain the declaration in addition to the symbol/isValidTypeOnlyUseSite
+            const declaration = findAncestor(symbol.declarations?.[0], isAnyImportOrRequireStatement);
+            importAdder.addVerbatimImport(Debug.checkDefined(declaration));
         }
-    }
+        else {
+            importAdder.addImportFromSymbol(targetSymbol, isValidTypeOnlyUseSite);
+        }
+    });
 
     // Also, import things used from the old file, and insert 'export' modifiers as necessary in the old file.
     const targetFileSourceFile = program.getSourceFile(targetFile) ?? createFutureSourceFile(targetFile, ModuleKind.ESNext, program);
@@ -125,17 +108,8 @@ export function getTargetFileImportsAndAddExportInOldFile(
                 addExportToChanges(oldFile, top, name, changes, useEsModuleSyntax);
                 oldFileSymbols.push(symbol);
             }
-            if (!importAdder) {
-                if (hasSyntacticModifier(decl, ModifierFlags.Default)) {
-                    oldFileDefault = name;
-                }
-                else {
-                    oldFileNamedImports.push(name.text);
-                }
-            }
         }
     });
 
     makeImportOrRequire(oldFile, oldFileDefault, oldFileNamedImports, oldFile.fileName, program, host, useEsModuleSyntax, quotePreference, oldFileSymbols, importAdder, targetFileSourceFile);
-    return copiedOldImports;
 }

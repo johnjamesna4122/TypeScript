@@ -11,6 +11,7 @@ import {
     AmpersandAmpersandEqualsToken,
     AnyImportOrBareOrAccessedRequire,
     AnyImportOrReExport,
+    AnyImportOrRequireStatement,
     AnyImportSyntax,
     AnyValidImportOrReExport,
     append,
@@ -1979,6 +1980,11 @@ export function isAnyImportSyntax(node: Node): node is AnyImportSyntax {
 /** @internal */
 export function isAnyImportOrBareOrAccessedRequire(node: Node): node is AnyImportOrBareOrAccessedRequire {
     return isAnyImportSyntax(node) || isVariableDeclarationInitializedToBareOrAccessedRequire(node);
+}
+
+/** @internal */
+export function isAnyImportOrRequireStatement(node: Node): node is AnyImportOrRequireStatement {
+    return isAnyImportSyntax(node) || isRequireVariableStatement(node);
 }
 
 /** @internal */

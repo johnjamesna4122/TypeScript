@@ -54,6 +54,7 @@ import {
     getQuotePreference,
     getSourceFileOfNode,
     getSymbolId,
+    getSynthesizedDeepClone,
     getTokenAtPosition,
     getTokenPosOfNode,
     getTypeKeywordOfTypeOnlyImport,
@@ -219,6 +220,7 @@ export interface ImportAdder {
     addImportFromSymbol: (exportedSymbol: Symbol, isValidTypeOnlyUseSite?: boolean) => void;
     addImportForNonExistentExport: (exportName: string, exportingFileName: string, exportKind: ExportKind, exportedMeanings: SymbolFlags, isImportUsageValidAsTypeOnly: boolean) => void;
     addImportForUnresolvedIdentifier: (context: CodeFixContextBase, symbolToken: Identifier, useAutoImportProvider: boolean) => void;
+    addVerbatimImport: (declaration: AnyImportOrRequireStatement) => void;
     removeExistingImport: (declaration: ImportClause | ImportSpecifier | NamespaceImport | VariableDeclarationInitializedTo<RequireOrImportCall> | BindingElement) => void;
     writeFixes: (changeTracker: textChanges.ChangeTracker, oldFileQuotePreference?: QuotePreference) => void;
 }
@@ -241,11 +243,16 @@ function createImportAdderWorker(sourceFile: SourceFile | FutureSourceFile, prog
     const importType: FixAddJsdocTypeImport[] = [];
     const addToExisting = new Map<ImportClause | ObjectBindingPattern, AddToExistingState>();
     const removeExisting = new Set<ImportClause | ImportSpecifier | NamespaceImport | VariableDeclarationInitializedTo<RequireOrImportCall> | BindingElement>();
+    const verbatimImports = new Set<AnyImportOrRequireStatement>();
 
     type NewImportsKey = `${0 | 1}|${string}`;
     /** Use `getNewImportEntry` for access */
     const newImports = new Map<NewImportsKey, Mutable<ImportsCollection & { useRequire: boolean; }>>();
-    return { addImportFromDiagnostic, addImportFromSymbol, writeFixes, hasFixes, addImportForUnresolvedIdentifier, addImportForNonExistentExport, removeExistingImport };
+    return { addImportFromDiagnostic, addImportFromSymbol, writeFixes, hasFixes, addImportForUnresolvedIdentifier, addImportForNonExistentExport, removeExistingImport, addVerbatimImport };
+
+    function addVerbatimImport(declaration: AnyImportOrRequireStatement) {
+        verbatimImports.add(declaration);
+    }
 
     function addImportForUnresolvedIdentifier(context: CodeFixContextBase, symbolToken: Identifier, useAutoImportProvider: boolean) {
         const info = getFixInfosWithoutDiagnostic(context, symbolToken, useAutoImportProvider);
@@ -568,6 +575,7 @@ function createImportAdderWorker(sourceFile: SourceFile | FutureSourceFile, prog
             );
             newDeclarations = combine(newDeclarations, declarations);
         });
+        newDeclarations = combine(newDeclarations, verbatimImports.size ? [...verbatimImports].map(i => getSynthesizedDeepClone(i, /*includeTrivia*/ true)) : undefined);
         if (newDeclarations) {
             insertImports(changeTracker, sourceFile, newDeclarations, /*blankLineBetween*/ true, preferences);
         }

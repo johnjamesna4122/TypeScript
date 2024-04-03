@@ -2634,19 +2634,19 @@ export function insertImports(changes: textChanges.ChangeTracker, sourceFile: So
     const decl = isArray(imports) ? imports[0] : imports;
     const importKindPredicate: (node: Node) => node is AnyImportOrRequireStatement = decl.kind === SyntaxKind.VariableStatement ? isRequireVariableStatement : isAnyImportSyntax;
     const existingImportStatements = filter(sourceFile.statements, importKindPredicate);
+    const { comparer, isSorted } = OrganizeImports.getOrganizeImportsStringComparerWithDetection(existingImportStatements, preferences);
     const sortedNewImports = isArray(imports) ? stableSort(imports, (a, b) => OrganizeImports.compareImportsOrRequireStatements(a, b, comparer)) : [imports];
     if (!existingImportStatements?.length) {
         if (isFullSourceFile(sourceFile)) {
             changes.insertNodesAtTopOfFile(sourceFile, sortedNewImports, blankLineBetween);
         }
         else {
-            changes.createNewFile(/*oldFile*/ undefined, sourceFile.fileName, sortedNewImports);
+            changes.insertStatementsInNewFile(sourceFile.fileName, sortedNewImports);
         }
         return;
     }
 
     Debug.assert(isFullSourceFile(sourceFile));
-    const { comparer, isSorted } = OrganizeImports.getOrganizeImportsStringComparerWithDetection(existingImportStatements, preferences);
     if (existingImportStatements && isSorted) {
         for (const newImport of sortedNewImports) {
             const insertionIndex = OrganizeImports.getImportDeclarationInsertionIndex(existingImportStatements, newImport, comparer);
