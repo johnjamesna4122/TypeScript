@@ -108,6 +108,7 @@ import {
     getModuleInstanceState,
     getNameOfDeclaration,
     getNodeId,
+    getOriginalNode,
     getPackageNameFromTypesPackageName,
     getPathComponents,
     getRootDeclaration,
@@ -382,7 +383,6 @@ import {
     VoidExpression,
     walkUpParenthesizedExpressions,
     YieldExpression,
-    getOriginalNode,
 } from "./_namespaces/ts";
 // These utilities are common to multiple language service features.
 // #region
@@ -2501,11 +2501,6 @@ export function moduleResolutionUsesNodeModules(moduleResolution: ModuleResoluti
     return moduleResolution === ModuleResolutionKind.Node10
         || moduleResolution >= ModuleResolutionKind.Node16 && moduleResolution <= ModuleResolutionKind.NodeNext
         || moduleResolution === ModuleResolutionKind.Bundler;
-}
-
-/** @internal */
-export function makeImportIfNecessary(defaultImport: Identifier | undefined, namedImports: readonly ImportSpecifier[] | undefined, moduleSpecifier: string, quotePreference: QuotePreference): ImportDeclaration | undefined {
-    return defaultImport || namedImports && namedImports.length ? makeImport(defaultImport, namedImports, moduleSpecifier, quotePreference) : undefined;
 }
 
 /** @internal */

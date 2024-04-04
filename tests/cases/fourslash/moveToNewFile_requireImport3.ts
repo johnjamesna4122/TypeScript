@@ -18,14 +18,16 @@
 
 verify.noErrors();
 
+// This test used to "work" but it's not totally clear that it should have.
+// module.exports and var/require are not supposed to be recognized as anything
+// in .ts files.
+
 verify.moveToNewFile({
     newFileContents: {
-        "/b.ts": "",
+        "/b.ts": `var a = require("./a");\n`,
 
         "/f.ts":
-`var a = require("./a");
-
-function f() {
+`function f() {
     a;
 }
 `,

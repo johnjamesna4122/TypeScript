@@ -3,7 +3,7 @@ import {
     codefix,
     Debug,
     findAncestor,
-    Identifier,
+    FutureSourceFile,
     ImportClause,
     ImportEqualsDeclaration,
     ImportSpecifier,
@@ -14,7 +14,6 @@ import {
     isImportSpecifier,
     isNamespaceImport,
     isVariableDeclaration,
-    ModuleKind,
     NamespaceImport,
     Program,
     RequireOrImportCall,
@@ -27,18 +26,13 @@ import {
     VariableDeclarationInitializedTo,
 } from "../_namespaces/ts";
 import {
-    LanguageServiceHost,
-} from "../types";
-import {
-    createFutureSourceFile,
     nodeSeenTracker,
-    QuotePreference,
 } from "../utilities";
 import {
     addExportToChanges,
+    addImportsForMovedSymbols,
     getTopLevelDeclarationStatement,
     isTopLevelDeclaration,
-    makeImportOrRequire,
     nameOfTopLevelDeclaration,
 } from "./moveToFile";
 
@@ -74,15 +68,13 @@ export function refactorKindBeginsWith(known: string, requested: string | undefi
 /** @internal */
 export function getTargetFileImportsAndAddExportInOldFile(
     oldFile: SourceFile,
-    targetFile: string,
+    targetFile: SourceFile | FutureSourceFile,
     importsToCopy: Map<Symbol, boolean>,
     targetFileImportsFromOldFile: Set<Symbol>,
     changes: textChanges.ChangeTracker,
     checker: TypeChecker,
     program: Program,
-    host: LanguageServiceHost,
     useEsModuleSyntax: boolean,
-    quotePreference: QuotePreference,
     importAdder: codefix.ImportAdder,
 ) {
     /**
@@ -99,15 +91,10 @@ export function getTargetFileImportsAndAddExportInOldFile(
             importAdder.addVerbatimImport(Debug.checkDefined(declaration));
         }
         else {
-            importAdder.addImportFromSymbol(targetSymbol, isValidTypeOnlyUseSite);
+            importAdder.addImportFromSymbol(targetSymbol, isValidTypeOnlyUseSite, symbol.name);
         }
     });
 
-    // Also, import things used from the old file, and insert 'export' modifiers as necessary in the old file.
-    const targetFileSourceFile = program.getSourceFile(targetFile) ?? createFutureSourceFile(targetFile, ModuleKind.ESNext, program);
-    let oldFileDefault: Identifier | undefined;
-    const oldFileNamedImports: string[] = [];
-    const oldFileSymbols: Symbol[] = [];
     const markSeenTop = nodeSeenTracker(); // Needed because multiple declarations may appear in `const x = 0, y = 1;`.
     targetFileImportsFromOldFile.forEach(symbol => {
         if (!symbol.declarations) {
@@ -121,10 +108,9 @@ export function getTargetFileImportsAndAddExportInOldFile(
             const top = getTopLevelDeclarationStatement(decl);
             if (markSeenTop(top)) {
                 addExportToChanges(oldFile, top, name, changes, useEsModuleSyntax);
-                oldFileSymbols.push(symbol);
             }
         }
     });
 
-    makeImportOrRequire(oldFile, oldFileDefault, oldFileNamedImports, oldFile.fileName, program, host, useEsModuleSyntax, quotePreference, oldFileSymbols, importAdder, targetFileSourceFile);
+    addImportsForMovedSymbols([...targetFileImportsFromOldFile], oldFile.fileName, importAdder, program);
 }

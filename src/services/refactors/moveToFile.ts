@@ -112,7 +112,6 @@ import {
     LanguageServiceHost,
     last,
     length,
-    makeImportIfNecessary,
     makeStringLiteral,
     mapDefined,
     ModifierFlags,
@@ -131,7 +130,6 @@ import {
     RefactorContext,
     RefactorEditInfo,
     RequireOrImportCall,
-    RequireVariableStatement,
     resolvePath,
     ScriptTarget,
     skipAlias,
@@ -251,22 +249,33 @@ export function getNewStatementsAndRemoveFromOldFile(
 ) {
     const checker = program.getTypeChecker();
     const prologueDirectives = takeWhile(oldFile.statements, isPrologueDirective);
-    if (oldFile.externalModuleIndicator === undefined && oldFile.commonJsModuleIndicator === undefined && usage.oldImportsNeededByTargetFile.size === 0 && usage.targetFileImportsFromOldFile.size === 0 && typeof targetFile === "string") {
+    if (!oldFile.externalModuleIndicator && !oldFile.commonJsModuleIndicator && !targetFile.externalModuleIndicator && !targetFile.commonJsModuleIndicator) {
         deleteMovedStatements(oldFile, toMove.ranges, changes);
-        return [...prologueDirectives, ...toMove.all];
+        const statements = [...prologueDirectives, ...toMove.all];
+        if (isFullSourceFile(targetFile)) {
+            changes.insertNodesAtEndOfFile(targetFile, statements, /*blankLineBetween*/ false);
+        }
+        else {
+            changes.insertStatementsInNewFile(targetFile.fileName, statements, oldFile);
+        }
+        return;
     }
 
     const useEsModuleSyntax = !fileShouldUseJavaScriptRequire(targetFile.fileName, program, host, !!oldFile.commonJsModuleIndicator);
     const quotePreference = getQuotePreference(oldFile, preferences);
 
-    makeImportOrRequire(oldFile, /*defaultImport*/ undefined, /*imports*/ [], targetFile.fileName, program, host, useEsModuleSyntax, quotePreference, Array.from(usage.oldFileImportsFromTargetFile), importAdderForOldFile, oldFile);
+    addImportsForMovedSymbols(Array.from(usage.oldFileImportsFromTargetFile), targetFile.fileName, importAdderForOldFile, program);
     deleteUnusedOldImports(oldFile, toMove.all, changes, usage.unusedImportsFromOldFile, checker, importAdderForOldFile);
     importAdderForOldFile.writeFixes(changes, quotePreference);
 
     deleteMovedStatements(oldFile, toMove.ranges, changes);
     updateImportsInOtherFiles(changes, program, host, oldFile, usage.movedSymbols, targetFile.fileName, quotePreference);
 
-    getTargetFileImportsAndAddExportInOldFile(oldFile, targetFile.fileName, usage.oldImportsNeededByTargetFile, usage.targetFileImportsFromOldFile, changes, checker, program, host, useEsModuleSyntax, quotePreference, importAdderForNewFile);
+    getTargetFileImportsAndAddExportInOldFile(oldFile, targetFile, usage.oldImportsNeededByTargetFile, usage.targetFileImportsFromOldFile, changes, checker, program, useEsModuleSyntax, importAdderForNewFile);
+    if (!isFullSourceFile(targetFile) && prologueDirectives.length) {
+        // Ensure prologue directives come before imports
+        changes.insertStatementsInNewFile(targetFile.fileName, prologueDirectives, oldFile);
+    }
     importAdderForNewFile.writeFixes(changes, quotePreference);
 
     const body = addExports(oldFile, toMove.all, usage.oldFileImportsFromTargetFile, useEsModuleSyntax);
@@ -491,56 +500,16 @@ export type SupportedImportStatement =
     | VariableStatement;
 
 /** @internal */
-export function makeImportOrRequire(
-    sourceFile: SourceFile,
-    defaultImport: Identifier | undefined,
-    imports: readonly string[],
-    targetFileNameWithExtension: string,
-    program: Program,
-    host: LanguageServiceHost,
-    useEs6Imports: boolean,
-    quotePreference: QuotePreference,
+export function addImportsForMovedSymbols(
     symbols: Symbol[],
+    targetFileName: string,
     importAdder: codefix.ImportAdder,
-    importingSourceFile: SourceFile | FutureSourceFile,
+    program: Program,
 ) {
-    const pathToTargetFile = resolvePath(getDirectoryPath(sourceFile.path), targetFileNameWithExtension);
-    const pathToTargetFileWithCorrectExtension = importingSourceFile ? getModuleSpecifier(program.getCompilerOptions(), importingSourceFile, importingSourceFile.fileName, pathToTargetFile, createModuleSpecifierResolutionHost(program, host)) :
-        getModuleSpecifier(program.getCompilerOptions(), sourceFile, sourceFile.fileName, pathToTargetFile, createModuleSpecifierResolutionHost(program, host));
-
-    if (useEs6Imports) {
-        if (importAdder && symbols && importingSourceFile) {
-            for (const symbol of symbols) {
-                if (importAdder) {
-                    const symbolName = getNameForExportedSymbol(symbol, getEmitScriptTarget(program.getCompilerOptions()));
-                    const exportKind = symbol.name === "default" && symbol.parent ? ExportKind.Default : ExportKind.Named;
-                    importAdder.addImportForNonExistentExport(symbolName, targetFileNameWithExtension, exportKind, symbol.flags, /*isImportUsageValidAsTypeOnly*/ false);
-                }
-            }
-        }
-        else {
-            const specifiers = imports.map(i => factory.createImportSpecifier(/*isTypeOnly*/ false, /*propertyName*/ undefined, factory.createIdentifier(i)));
-            const newImports = makeImportIfNecessary(defaultImport, specifiers, pathToTargetFileWithCorrectExtension, quotePreference);
-            return newImports;
-        }
-    }
-    else {
-        if (importAdder && symbols && importingSourceFile) {
-            for (const symbol of symbols) {
-                if (importAdder) {
-                    const symbolName = getNameForExportedSymbol(symbol, getEmitScriptTarget(program.getCompilerOptions()));
-                    const exportKind = symbol.name === "default" && symbol.parent ? ExportKind.Default : ExportKind.Named;
-                    importAdder.addImportForNonExistentExport(symbolName, targetFileNameWithExtension, exportKind, symbol.flags, /*isImportUsageValidAsTypeOnly*/ false);
-                }
-            }
-        }
-        else {
-            Debug.assert(!defaultImport, "No default import should exist"); // If there's a default export, it should have been an es6 module.
-            const bindingElements = imports.map(i => factory.createBindingElement(/*dotDotDotToken*/ undefined, /*propertyName*/ undefined, i));
-            return bindingElements.length
-                ? makeVariableStatement(factory.createObjectBindingPattern(bindingElements), /*type*/ undefined, createRequireCall(makeStringLiteral(pathToTargetFileWithCorrectExtension, quotePreference))) as RequireVariableStatement
-                : undefined;
-        }
+    for (const symbol of symbols) {
+        const symbolName = getNameForExportedSymbol(symbol, getEmitScriptTarget(program.getCompilerOptions()));
+        const exportKind = symbol.name === "default" && symbol.parent ? ExportKind.Default : ExportKind.Named;
+        importAdder.addImportForNonExistentExport(symbolName, targetFileName, exportKind, symbol.flags, /*isImportUsageValidAsTypeOnly*/ false);
     }
 }
 
@@ -814,16 +783,16 @@ export interface StatementRange {
 
 /** @internal */
 export interface UsageInfo {
-    // Symbols whose declarations are moved from the old file to the new file.
+    /** Symbols whose declarations are moved from the old file to the new file. */
     readonly movedSymbols: Set<Symbol>;
 
-    // Symbols declared in the old file that must be imported by the new file. (May not already be exported.)
+    /** Symbols declared in the old file that must be imported by the new file. (May not already be exported.) */
     readonly targetFileImportsFromOldFile: Set<Symbol>;
-    // Subset of movedSymbols that are still used elsewhere in the old file and must be imported back.
+    /** Subset of movedSymbols that are still used elsewhere in the old file and must be imported back. */
     readonly oldFileImportsFromTargetFile: Set<Symbol>;
 
     readonly oldImportsNeededByTargetFile: Map<Symbol, boolean>;
-    // Subset of oldImportsNeededByTargetFile that are will no longer be used in the old file.
+    /** Subset of oldImportsNeededByTargetFile that are will no longer be used in the old file. */
     readonly unusedImportsFromOldFile: Set<Symbol>;
 }
 

@@ -218,7 +218,7 @@ registerCodeFix({
 export interface ImportAdder {
     hasFixes(): boolean;
     addImportFromDiagnostic: (diagnostic: DiagnosticWithLocation, context: CodeFixContextBase) => void;
-    addImportFromSymbol: (exportedSymbol: Symbol, isValidTypeOnlyUseSite?: boolean) => void;
+    addImportFromSymbol: (exportedSymbol: Symbol, isValidTypeOnlyUseSite?: boolean, localName?: string) => void;
     addImportForNonExistentExport: (exportName: string, exportingFileName: string, exportKind: ExportKind, exportedMeanings: SymbolFlags, isImportUsageValidAsTypeOnly: boolean) => void;
     addImportForUnresolvedIdentifier: (context: CodeFixContextBase, symbolToken: Identifier, useAutoImportProvider: boolean) => void;
     addVerbatimImport: (declaration: AnyImportOrRequireStatement | ImportClause | ImportSpecifier | NamespaceImport | VariableDeclarationInitializedTo<RequireOrImportCall> | BindingElement) => void;
@@ -321,7 +321,7 @@ function createImportAdderWorker(sourceFile: SourceFile | FutureSourceFile, prog
         }
     }
 
-    function addImportFromSymbol(symbolInfo: Symbol, isValidTypeOnlyUseSite?: boolean) {
+    function addImportFromSymbol(symbolInfo: Symbol, isValidTypeOnlyUseSite?: boolean, localName?: string) {
         const moduleSymbol = Debug.checkDefined(symbolInfo.parent);
         const symbolName = getNameForExportedSymbol(symbolInfo, getEmitScriptTarget(compilerOptions));
         const checker = program.getTypeChecker();
@@ -330,7 +330,7 @@ function createImportAdderWorker(sourceFile: SourceFile | FutureSourceFile, prog
         const useRequire = shouldUseRequire(sourceFile, program);
         const fix = getImportFixForSymbol(sourceFile, Debug.checkDefined(exportInfo), program, /*position*/ undefined, !!isValidTypeOnlyUseSite, useRequire, host, preferences);
         if (fix) {
-            addImport({ fix, symbolName, errorIdentifierText: undefined });
+            addImport({ fix, symbolName: localName ?? symbolName, errorIdentifierText: undefined });
         }
     }
 
@@ -587,6 +587,10 @@ function createImportAdderWorker(sourceFile: SourceFile | FutureSourceFile, prog
         const importDeclarations = new Set(mapDefined([...verbatimImports], d => findAncestor(d, isImportDeclaration)));
         const requireStatements = new Set(mapDefined([...verbatimImports], d => findAncestor(d, isRequireVariableStatement)));
         return [
+            ...mapDefined([...verbatimImports], d =>
+                d.kind === SyntaxKind.ImportEqualsDeclaration
+                    ? getSynthesizedDeepClone(d, /*includeTrivia*/ true)
+                    : undefined),
             ...[...importDeclarations].map(d => {
                 if (verbatimImports.has(d)) {
                     return getSynthesizedDeepClone(d, /*includeTrivia*/ true);
@@ -649,7 +653,7 @@ function createImportAdderWorker(sourceFile: SourceFile | FutureSourceFile, prog
     }
 
     function hasFixes() {
-        return addToNamespace.length > 0 || importType.length > 0 || addToExisting.size > 0 || newImports.size > 0;
+        return addToNamespace.length > 0 || importType.length > 0 || addToExisting.size > 0 || newImports.size > 0 || verbatimImports.size > 0 || removeExisting.size > 0;
     }
 }
 
