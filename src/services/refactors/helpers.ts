@@ -3,7 +3,6 @@ import {
     codefix,
     Debug,
     findAncestor,
-    FutureSourceFile,
     ImportClause,
     ImportEqualsDeclaration,
     ImportSpecifier,
@@ -68,9 +67,8 @@ export function refactorKindBeginsWith(known: string, requested: string | undefi
 /** @internal */
 export function getTargetFileImportsAndAddExportInOldFile(
     oldFile: SourceFile,
-    targetFile: SourceFile | FutureSourceFile,
     importsToCopy: Map<Symbol, boolean>,
-    targetFileImportsFromOldFile: Set<Symbol>,
+    targetFileImportsFromOldFile: Map<Symbol, boolean>,
     changes: textChanges.ChangeTracker,
     checker: TypeChecker,
     program: Program,
@@ -96,7 +94,7 @@ export function getTargetFileImportsAndAddExportInOldFile(
     });
 
     const markSeenTop = nodeSeenTracker(); // Needed because multiple declarations may appear in `const x = 0, y = 1;`.
-    targetFileImportsFromOldFile.forEach(symbol => {
+    targetFileImportsFromOldFile.forEach((_, symbol) => {
         if (!symbol.declarations) {
             return;
         }
@@ -112,5 +110,5 @@ export function getTargetFileImportsAndAddExportInOldFile(
         }
     });
 
-    addImportsForMovedSymbols([...targetFileImportsFromOldFile], oldFile.fileName, importAdder, program);
+    addImportsForMovedSymbols(targetFileImportsFromOldFile, oldFile.fileName, importAdder, program);
 }

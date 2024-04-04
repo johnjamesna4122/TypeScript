@@ -84,7 +84,7 @@ function pasteEdits(
             });
             const usage = getUsageInfo(copiedFrom.file, statements, originalProgram!.getTypeChecker(), getExistingLocals(updatedFile, statements, originalProgram!.getTypeChecker()));
             const importAdder = codefix.createImportAdder(updatedFile, updatedProgram!, preferences, host);
-            getTargetFileImportsAndAddExportInOldFile(copiedFrom.file, targetFile, usage.oldImportsNeededByTargetFile, usage.targetFileImportsFromOldFile, changes, originalProgram!.getTypeChecker(), updatedProgram!, !fileShouldUseJavaScriptRequire(targetFile.fileName, updatedProgram!, host, !!copiedFrom.file.commonJsModuleIndicator), importAdder);
+            getTargetFileImportsAndAddExportInOldFile(copiedFrom.file, usage.oldImportsNeededByTargetFile, usage.targetFileImportsFromOldFile, changes, originalProgram!.getTypeChecker(), updatedProgram!, !fileShouldUseJavaScriptRequire(targetFile.fileName, updatedProgram!, host, !!copiedFrom.file.commonJsModuleIndicator), importAdder);
             importAdder.writeFixes(changes, getQuotePreference(copiedFrom.file, preferences));
         }
         else {
