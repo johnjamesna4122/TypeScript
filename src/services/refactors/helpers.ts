@@ -89,6 +89,12 @@ export function getTargetFileImportsAndAddExportInOldFile(
             importAdder.addVerbatimImport(Debug.checkDefined(declaration));
         }
         else {
+            // TODO: `addImportFromSymbol` should possibly take some optional info from the original
+            // import we're copying - a reference to the declaration would suffice. Currently, type-only
+            // imports don't get copied as type-only unless a new import would have been added as type-only
+            // according to preferences and compiler options and usage. But since this import is essentially
+            // being copied, some orignal declaration info could be used to make the new import more similar
+            // to the original.
             importAdder.addImportFromSymbol(targetSymbol, isValidTypeOnlyUseSite, symbol.name);
         }
     });
