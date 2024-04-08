@@ -25,6 +25,9 @@ import {
     VariableDeclarationInitializedTo,
 } from "../_namespaces/ts";
 import {
+    ImportOrRequireAliasDeclaration,
+} from "../_namespaces/ts.codefix";
+import {
     nodeSeenTracker,
 } from "../utilities";
 import {
@@ -82,20 +85,13 @@ export function getTargetFileImportsAndAddExportInOldFile(
      */
     importsToCopy.forEach((isValidTypeOnlyUseSite, symbol) => {
         const targetSymbol = skipAlias(symbol, checker);
+        // TODO: maybe `importsToCopy` should contain the declaration in addition to the symbol/isValidTypeOnlyUseSite
+        const declaration = tryCast(symbol.declarations?.[0], (d): d is ImportOrRequireAliasDeclaration => isImportSpecifier(d) || isImportClause(d) || isNamespaceImport(d) || isImportEqualsDeclaration(d) || isBindingElement(d) || isVariableDeclaration(d));
         if (checker.isUnknownSymbol(targetSymbol)) {
-            // TODO: maybe `importsToCopy` should contain the declaration in addition to the symbol/isValidTypeOnlyUseSite
-            const declaration = tryCast(symbol.declarations?.[0], (d): d is ImportSpecifier | ImportClause | NamespaceImport | ImportEqualsDeclaration | BindingElement | VariableDeclarationInitializedTo<RequireOrImportCall> => isImportSpecifier(d) || isImportClause(d) || isNamespaceImport(d) || isImportEqualsDeclaration(d) || isBindingElement(d) || isVariableDeclaration(d))
-                ?? findAncestor(symbol.declarations?.[0], isAnyImportOrRequireStatement);
-            importAdder.addVerbatimImport(Debug.checkDefined(declaration));
+            importAdder.addVerbatimImport(Debug.checkDefined(declaration ?? findAncestor(symbol.declarations?.[0], isAnyImportOrRequireStatement)));
         }
         else {
-            // TODO: `addImportFromSymbol` should possibly take some optional info from the original
-            // import we're copying - a reference to the declaration would suffice. Currently, type-only
-            // imports don't get copied as type-only unless a new import would have been added as type-only
-            // according to preferences and compiler options and usage. But since this import is essentially
-            // being copied, some orignal declaration info could be used to make the new import more similar
-            // to the original.
-            importAdder.addImportFromSymbol(targetSymbol, isValidTypeOnlyUseSite, symbol.name);
+            importAdder.addImportFromSymbol(targetSymbol, isValidTypeOnlyUseSite, declaration);
         }
     });
 
