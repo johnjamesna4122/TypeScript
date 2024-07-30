@@ -91,6 +91,63 @@ describe("unittests:: tsc:: projectReferences::", () => {
 
     verifyTsc({
         scenario: "projectReferences",
+        subScenario: "uses referenced project resolution mode computation for resolutions in referenced project outputs",
+        fs: () =>
+            loadProjectFromFiles({
+                "/node_modules/some-lib/package.json": jsonToReadableText({
+                    name: "some-lib",
+                    type: "module",
+                    exports: {
+                        import: "./index.js",
+                        require: "./index.cjs",
+                    },
+                }),
+                "/node_modules/some-lib/index.d.ts": `
+                    export class SomeType {
+                        private property;
+                    }`,
+                "/node_modules/some-lib/index.d.cts": `
+                    export class SomeType {
+                        private property;
+                    }`,
+
+                "/package.json": jsonToReadableText({
+                    name: "my-package",
+                    type: "module",
+                    exports: "./dist/index.js",
+                }),
+
+                "/tsconfig.json": jsonToReadableText({
+                    include: ["src"],
+                    compilerOptions: {
+                        composite: true,
+                        module: "nodenext",
+                        outDir: "dist",
+                        rootDir: "src",
+                    },
+                }),
+                "/src/index.ts": `
+                    import { SomeType } from 'some-lib'
+                    export function myFunction(input: SomeType) {}`,
+
+                "/tsconfig.test.json": jsonToReadableText({
+                    references: [{ path: "./tsconfig.json" }],
+                    include: ["test"],
+                    compilerOptions: {
+                        module: "preserve",
+                        noEmit: true,
+                    },
+                }),
+                "/test/test.ts": `
+                    import { myFunction } from "my-package";
+                    import { SomeType } from "some-lib";
+                    myFunction(new SomeType());`,
+            }),
+        commandLineArgs: ["-b", "tsconfig.test.json", "--traceResolution", "--pretty", "false"],
+    });
+
+    verifyTsc({
+        scenario: "projectReferences",
         subScenario: "referencing ambient const enum from referenced project with preserveConstEnums",
         fs: () =>
             loadProjectFromFiles({

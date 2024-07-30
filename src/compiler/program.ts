@@ -3698,10 +3698,16 @@ export function createProgram(rootNamesOrOptions: readonly string[] | CreateProg
     }
 
     function getCreateSourceFileOptions(fileName: string, moduleResolutionCache: ModuleResolutionCache | undefined, host: CompilerHost, options: CompilerOptions): CreateSourceFileOptions {
+        const normalizedFileName = getNormalizedAbsolutePath(fileName, currentDirectory);
         // It's a _little odd_ that we can't set `impliedNodeFormat` until the program step - but it's the first and only time we have a resolution cache
         // and a freshly made source file node on hand at the same time, and we need both to set the field. Persisting the resolution cache all the way
         // to the check and emit steps would be bad - so we much prefer detecting and storing the format information on the source file node upfront.
-        const result = getImpliedNodeFormatForFileWorker(getNormalizedAbsolutePath(fileName, currentDirectory), moduleResolutionCache?.getPackageJsonInfoCache(), host, options);
+        const result = getImpliedNodeFormatForFileWorker(
+            normalizedFileName,
+            moduleResolutionCache?.getPackageJsonInfoCache(),
+            host,
+            getRedirectReferenceForResolutionFromSourceOfProject(toPath(normalizedFileName))?.commandLine.options ?? options,
+        );
         const languageVersion = getEmitScriptTarget(options);
         const setExternalModuleIndicator = getSetExternalModuleIndicator(options);
         return typeof result === "object" ?

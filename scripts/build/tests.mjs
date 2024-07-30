@@ -124,6 +124,9 @@ export async function runConsoleTests(runJs, defaultReporter, runInParallel, opt
             args.unshift((inspect === "" || inspect === true) ? "--inspect-brk" : "--inspect-brk=" + inspect);
             args.push("-t", "0");
         }
+        else if (process.env.VSCODE_INSPECTOR_OPTIONS) {
+            args.push("-t", "0");
+        }
         else {
             args.push("-t", "" + testTimeout);
         }
