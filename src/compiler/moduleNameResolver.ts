@@ -533,6 +533,20 @@ function getCandidateFromTypeRoot(typeRoot: string, typeReferenceDirectiveName: 
  * is assumed to be the same as root directory of the project.
  */
 export function resolveTypeReferenceDirective(typeReferenceDirectiveName: string, containingFile: string | undefined, options: CompilerOptions, host: ModuleResolutionHost, redirectedReference?: ResolvedProjectReference, cache?: TypeReferenceDirectiveResolutionCache, resolutionMode?: ResolutionMode): ResolvedTypeReferenceDirectiveWithFailedLookupLocations {
+    // @ts-ignore
+    globalThis.writeTraceFile?.({
+        call: "resolveTypeReferenceDirective",
+        args: {
+            name: typeReferenceDirectiveName,
+            containingFile,
+            compilerOptions: options,
+            resolutionMode,
+            redirectedReference: redirectedReference && {
+                sourceFile: { fileName: redirectedReference.sourceFile.fileName },
+                commandLine: { options: redirectedReference.commandLine.options },
+            },
+        },
+    });
     Debug.assert(typeof typeReferenceDirectiveName === "string", "Non-string value passed to `ts.resolveTypeReferenceDirective`, likely by a wrapping package working with an outdated `resolveTypeReferenceDirectives` signature. This is probably not a problem in TS itself.");
     const traceEnabled = isTraceEnabled(options, host);
     if (redirectedReference) {
@@ -1399,6 +1413,20 @@ export function resolveModuleNameFromCache(moduleName: string, containingFile: s
 }
 
 export function resolveModuleName(moduleName: string, containingFile: string, compilerOptions: CompilerOptions, host: ModuleResolutionHost, cache?: ModuleResolutionCache, redirectedReference?: ResolvedProjectReference, resolutionMode?: ResolutionMode): ResolvedModuleWithFailedLookupLocations {
+    // @ts-ignore
+    globalThis.writeTraceFile?.({
+        call: "resolveModuleName",
+        args: {
+            name: moduleName,
+            containingFile,
+            compilerOptions,
+            resolutionMode,
+            redirectedReference: redirectedReference && {
+                sourceFile: { fileName: redirectedReference.sourceFile.fileName },
+                commandLine: { options: redirectedReference.commandLine.options },
+            },
+        },
+    });
     const traceEnabled = isTraceEnabled(compilerOptions, host);
     if (redirectedReference) {
         compilerOptions = redirectedReference.commandLine.options;
@@ -2392,6 +2420,11 @@ export interface PackageJsonInfoContents {
  * @internal
  */
 export function getPackageScopeForPath(directory: string, state: ModuleResolutionState): PackageJsonInfo | undefined {
+    // @ts-ignore
+    globalThis.writeTraceFile?.({
+        call: "getPackageScopeForPath",
+        args: { directory },
+    });
     return forEachAncestorDirectoryStoppingAtGlobalCache(
         state.host,
         directory,

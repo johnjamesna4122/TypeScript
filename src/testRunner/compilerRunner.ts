@@ -15,6 +15,10 @@ import * as Utils from "./_namespaces/Utils.js";
 import * as vfs from "./_namespaces/vfs.js";
 import * as vpath from "./_namespaces/vpath.js";
 
+require("fs").mkdirSync("trace-tests", { recursive: true });
+// @ts-ignore
+globalThis.outputFile = `trace-tests/${require("crypto").randomBytes(16).toString("hex")}`;
+
 export const enum CompilerTestType {
     Conformance,
     Regressions,
@@ -246,6 +250,29 @@ class CompilerTest {
             tsConfigOptions.configFile!.fileName = tsConfigOptions.configFilePath;
         }
 
+        const traceResolution = tsConfigOptions?.traceResolution || this.harnessSettings.traceResolution;
+        const baseUrl = tsConfigOptions?.baseUrl || this.harnessSettings.baseUrl;
+        const rootDirs = tsConfigOptions?.rootDirs || this.harnessSettings.rootDirs;
+        const moduleResolution = tsConfigOptions?.moduleResolution || this.harnessSettings.moduleResolution;
+        if (
+            traceResolution
+            && !baseUrl
+            && !rootDirs
+            && moduleResolution !== ts.ModuleResolutionKind.Classic
+            && (`${moduleResolution}`.toLowerCase()) !== "classic"
+        ) {
+            if (moduleResolution === ts.ModuleResolutionKind.Node10 || ["node", "node10"].includes(("" + moduleResolution).toLowerCase())) {
+                this.harnessSettings.moduleResolution = "bundler";
+            }
+            // @ts-ignore
+            globalThis.writeTraceFile = json => require("fs").appendFileSync(globalThis.outputFile, JSON.stringify(json) + "\n", "utf8");
+            // @ts-ignore
+            globalThis.writeTraceFile({
+                test: this.configuredName,
+                files: units,
+            });
+        }
+
         this.result = Compiler.compileFiles(
             this.toBeCompiled,
             this.otherFiles,
@@ -254,6 +281,9 @@ class CompilerTest {
             /*currentDirectory*/ this.harnessSettings.currentDirectory,
             testCaseContent.symlinks,
         );
+
+        // @ts-ignore
+        globalThis.writeTraceFile = () => {};
 
         this.options = this.result.options;
     }
