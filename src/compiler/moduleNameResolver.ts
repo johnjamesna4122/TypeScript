@@ -533,20 +533,6 @@ function getCandidateFromTypeRoot(typeRoot: string, typeReferenceDirectiveName: 
  * is assumed to be the same as root directory of the project.
  */
 export function resolveTypeReferenceDirective(typeReferenceDirectiveName: string, containingFile: string | undefined, options: CompilerOptions, host: ModuleResolutionHost, redirectedReference?: ResolvedProjectReference, cache?: TypeReferenceDirectiveResolutionCache, resolutionMode?: ResolutionMode): ResolvedTypeReferenceDirectiveWithFailedLookupLocations {
-    // @ts-ignore
-    globalThis.writeTraceFile?.({
-        call: "resolveTypeReferenceDirective",
-        args: {
-            name: typeReferenceDirectiveName,
-            containingFile,
-            compilerOptions: options,
-            resolutionMode,
-            redirectedReference: redirectedReference && {
-                sourceFile: { fileName: redirectedReference.sourceFile.fileName },
-                commandLine: { options: redirectedReference.commandLine.options },
-            },
-        },
-    });
     Debug.assert(typeof typeReferenceDirectiveName === "string", "Non-string value passed to `ts.resolveTypeReferenceDirective`, likely by a wrapping package working with an outdated `resolveTypeReferenceDirectives` signature. This is probably not a problem in TS itself.");
     const traceEnabled = isTraceEnabled(options, host);
     if (redirectedReference) {
@@ -566,6 +552,21 @@ export function resolveTypeReferenceDirective(typeReferenceDirectiveName: string
             trace(host, Diagnostics.Resolution_for_type_reference_directive_0_was_found_in_cache_from_location_1, typeReferenceDirectiveName, containingDirectory);
             traceResult(result);
         }
+        // @ts-ignore
+        globalThis.writeTraceFile?.({
+            call: "resolveTypeReferenceDirective",
+            args: {
+                name: typeReferenceDirectiveName,
+                containingFile,
+                compilerOptions: options,
+                resolutionMode,
+                redirectedReference: redirectedReference && {
+                    sourceFile: { fileName: redirectedReference.sourceFile.fileName },
+                    commandLine: { options: redirectedReference.commandLine.options },
+                },
+            },
+            return: result,
+        });
         return result;
     }
 
@@ -656,6 +657,21 @@ export function resolveTypeReferenceDirective(typeReferenceDirectiveName: string
         }
     }
     if (traceEnabled) traceResult(result);
+    // @ts-ignore
+    globalThis.writeTraceFile?.({
+        call: "resolveTypeReferenceDirective",
+        args: {
+            name: typeReferenceDirectiveName,
+            containingFile,
+            compilerOptions: options,
+            resolutionMode,
+            redirectedReference: redirectedReference && {
+                sourceFile: { fileName: redirectedReference.sourceFile.fileName },
+                commandLine: { options: redirectedReference.commandLine.options },
+            },
+        },
+        return: result,
+    });
     return result;
 
     function traceResult(result: ResolvedTypeReferenceDirectiveWithFailedLookupLocations) {
@@ -1413,20 +1429,6 @@ export function resolveModuleNameFromCache(moduleName: string, containingFile: s
 }
 
 export function resolveModuleName(moduleName: string, containingFile: string, compilerOptions: CompilerOptions, host: ModuleResolutionHost, cache?: ModuleResolutionCache, redirectedReference?: ResolvedProjectReference, resolutionMode?: ResolutionMode): ResolvedModuleWithFailedLookupLocations {
-    // @ts-ignore
-    globalThis.writeTraceFile?.({
-        call: "resolveModuleName",
-        args: {
-            name: moduleName,
-            containingFile,
-            compilerOptions,
-            resolutionMode,
-            redirectedReference: redirectedReference && {
-                sourceFile: { fileName: redirectedReference.sourceFile.fileName },
-                commandLine: { options: redirectedReference.commandLine.options },
-            },
-        },
-    });
     const traceEnabled = isTraceEnabled(compilerOptions, host);
     if (redirectedReference) {
         compilerOptions = redirectedReference.commandLine.options;
@@ -1500,6 +1502,24 @@ export function resolveModuleName(moduleName: string, containingFile: string, co
         else {
             trace(host, Diagnostics.Module_name_0_was_not_resolved, moduleName);
         }
+    }
+
+    if (traceEnabled || !moduleName.startsWith("@typescript/")) {
+        // @ts-ignore
+        globalThis.writeTraceFile?.({
+            call: "resolveModuleName",
+            args: {
+                name: moduleName,
+                containingFile,
+                compilerOptions,
+                resolutionMode,
+                redirectedReference: redirectedReference && {
+                    sourceFile: { fileName: redirectedReference.sourceFile.fileName },
+                    commandLine: { options: redirectedReference.commandLine.options },
+                },
+            },
+            return: result,
+        });
     }
 
     return result;
@@ -2420,16 +2440,19 @@ export interface PackageJsonInfoContents {
  * @internal
  */
 export function getPackageScopeForPath(directory: string, state: ModuleResolutionState): PackageJsonInfo | undefined {
-    // @ts-ignore
-    globalThis.writeTraceFile?.({
-        call: "getPackageScopeForPath",
-        args: { directory },
-    });
-    return forEachAncestorDirectoryStoppingAtGlobalCache(
+    const result = forEachAncestorDirectoryStoppingAtGlobalCache(
         state.host,
         directory,
         dir => getPackageJsonInfo(dir, /*onlyRecordFailures*/ false, state),
     );
+    if (state.traceEnabled) {
+        // @ts-ignore
+        globalThis.writeTraceFile?.({
+            call: "getPackageScopeForPath",
+            args: { directory },
+        });
+    }
+    return result;
 }
 
 function getVersionPathsOfPackageJsonInfo(packageJsonInfo: PackageJsonInfo, state: ModuleResolutionState): VersionPaths | undefined {

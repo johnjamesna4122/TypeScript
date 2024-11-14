@@ -8936,7 +8936,7 @@ const _computedOptions = createComputedCompilerOptions({
         },
     },
     moduleResolution: {
-        dependencies: ["module", "target", "traceResolution"],
+        dependencies: ["module", "target"],
         computeValue: (compilerOptions): ModuleResolutionKind => {
             let moduleResolution = compilerOptions.moduleResolution;
             if (moduleResolution === undefined) {
@@ -8954,11 +8954,11 @@ const _computedOptions = createComputedCompilerOptions({
                         moduleResolution = ModuleResolutionKind.Bundler;
                         break;
                     default:
-                        moduleResolution = ModuleResolutionKind.Classic;
+                        moduleResolution = ModuleResolutionKind.Bundler;
                         break;
                 }
             }
-            if (moduleResolution === ModuleResolutionKind.Node10 && compilerOptions.traceResolution) {
+            if (moduleResolution === ModuleResolutionKind.Node10) {
                 moduleResolution = ModuleResolutionKind.Bundler;
             }
             return moduleResolution;
